@@ -20,13 +20,18 @@ function initDb(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS agents (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
-      model TEXT NOT NULL,
-      personality TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'builtin',
+      model TEXT DEFAULT NULL,
+      personality TEXT DEFAULT NULL,
+      endpoint TEXT DEFAULT NULL,
+      api_key TEXT DEFAULT NULL,
       avatar TEXT NOT NULL,
       elo INTEGER DEFAULT 1200,
       wins INTEGER DEFAULT 0,
       losses INTEGER DEFAULT 0,
       draws INTEGER DEFAULT 0,
+      owner_id TEXT DEFAULT NULL,
+      active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -89,6 +94,7 @@ function seedAgents(db: Database.Database) {
     {
       id: "stockfish-claude",
       name: "The Grandmaster",
+      type: "builtin",
       model: "claude-sonnet-4-6",
       personality:
         "You are a world-class chess grandmaster. You play precise, positional chess. You calculate deeply and prefer strategic advantages over flashy tactics. You occasionally comment on your moves with quiet confidence.",
@@ -98,6 +104,7 @@ function seedAgents(db: Database.Database) {
     {
       id: "aggressive-claude",
       name: "Blitz Demon",
+      type: "builtin",
       model: "claude-sonnet-4-6",
       personality:
         "You are an aggressive, attacking chess player. You love sacrifices, gambits, and wild tactical complications. You'd rather lose spectacularly than win boringly. You trash-talk your opponent playfully.",
@@ -107,6 +114,7 @@ function seedAgents(db: Database.Database) {
     {
       id: "defensive-claude",
       name: "The Wall",
+      type: "builtin",
       model: "claude-sonnet-4-6",
       personality:
         "You are an extremely defensive chess player. You build impenetrable fortresses and wait for your opponent to overextend. Patience is your weapon. You speak in calm, measured tones.",
@@ -116,6 +124,7 @@ function seedAgents(db: Database.Database) {
     {
       id: "chaotic-claude",
       name: "Chaos Engine",
+      type: "builtin",
       model: "claude-haiku-4-5-20251001",
       personality:
         "You are an unpredictable chess player who loves unusual openings and bizarre strategies. You play moves that confuse opponents. You speak in riddles and non-sequiturs.",
@@ -125,6 +134,7 @@ function seedAgents(db: Database.Database) {
     {
       id: "scholar-claude",
       name: "The Professor",
+      type: "builtin",
       model: "claude-sonnet-4-6",
       personality:
         "You are a chess scholar who plays based on deep opening theory and endgame knowledge. You reference famous games and players. You explain your reasoning like a teacher.",
@@ -134,6 +144,7 @@ function seedAgents(db: Database.Database) {
     {
       id: "rookie-claude",
       name: "Lucky Beginner",
+      type: "builtin",
       model: "claude-haiku-4-5-20251001",
       personality:
         "You are a beginner chess player who sometimes stumbles into brilliant moves by accident. You are enthusiastic but not always strategic. You celebrate every move like it's the best move ever played.",
@@ -143,9 +154,9 @@ function seedAgents(db: Database.Database) {
   ];
 
   const stmt = db.prepare(
-    "INSERT INTO agents (id, name, model, personality, avatar, elo) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO agents (id, name, type, model, personality, avatar, elo) VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
   for (const a of agents) {
-    stmt.run(a.id, a.name, a.model, a.personality, a.avatar, a.elo);
+    stmt.run(a.id, a.name, a.type, a.model, a.personality, a.avatar, a.elo);
   }
 }

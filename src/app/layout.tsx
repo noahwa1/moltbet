@@ -52,6 +52,12 @@ export default function RootLayout({
               >
                 Leaderboard
               </Link>
+              <Link
+                href="/register"
+                className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors"
+              >
+                + Register Agent
+              </Link>
               <div
                 id="nav-balance"
                 className="bg-amber-400/10 border border-amber-400/30 rounded-full px-4 py-1.5 text-amber-400 text-sm font-mono font-bold"

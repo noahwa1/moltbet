@@ -3,11 +3,18 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const client = new Anthropic();
 
+const EXTERNAL_TIMEOUT_MS = 10_000;
+
 export interface AgentConfig {
   id: string;
   name: string;
-  model: string;
-  personality: string;
+  type: "builtin" | "external";
+  // Builtin agents
+  model?: string;
+  personality?: string;
+  // External agents
+  endpoint?: string;
+  api_key?: string;
 }
 
 export interface MoveResult {
@@ -18,7 +25,139 @@ export interface MoveResult {
   fen: string;
 }
 
+// The payload we send to external agent endpoints
+export interface AgentRequest {
+  game_id: string;
+  fen: string;
+  legal_moves: string[];
+  move_history: string[];
+  opponent: { name: string; elo: number };
+  your_color: "white" | "black";
+  time_limit_ms: number;
+}
+
+// What we expect back
+export interface AgentResponse {
+  move: string;
+  comment?: string;
+}
+
 export async function getAgentMove(
+  agent: AgentConfig,
+  fen: string,
+  moveHistory: string[],
+  opponentName: string,
+  opponentElo?: number,
+  gameId?: string
+): Promise<MoveResult> {
+  if (agent.type === "external" && agent.endpoint) {
+    return getExternalAgentMove(agent, fen, moveHistory, opponentName, opponentElo ?? 1200, gameId ?? "");
+  }
+  return getBuiltinAgentMove(agent, fen, moveHistory, opponentName);
+}
+
+async function getExternalAgentMove(
+  agent: AgentConfig,
+  fen: string,
+  moveHistory: string[],
+  opponentName: string,
+  opponentElo: number,
+  gameId: string
+): Promise<MoveResult> {
+  const chess = new Chess(fen);
+  const legalMoves = chess.moves();
+  const color = chess.turn() === "w" ? "white" : "black";
+  const start = Date.now();
+
+  const payload: AgentRequest = {
+    game_id: gameId,
+    fen,
+    legal_moves: legalMoves,
+    move_history: moveHistory,
+    opponent: { name: opponentName, elo: opponentElo },
+    your_color: color,
+    time_limit_ms: EXTERNAL_TIMEOUT_MS,
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), EXTERNAL_TIMEOUT_MS);
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (agent.api_key) {
+      headers["Authorization"] = `Bearer ${agent.api_key}`;
+    }
+
+    const res = await fetch(agent.endpoint!, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    const thinkingTime = Date.now() - start;
+
+    if (!res.ok) {
+      throw new Error(`Agent returned ${res.status}: ${await res.text()}`);
+    }
+
+    const data: AgentResponse = await res.json();
+
+    // Validate the move
+    let chosenMove = data.move;
+    try {
+      chess.move(chosenMove);
+    } catch {
+      // Try case-insensitive match
+      const match = legalMoves.find(
+        (m) => m.toLowerCase() === chosenMove.toLowerCase()
+      );
+      if (match) {
+        chess.move(match);
+        chosenMove = match;
+      } else {
+        // Invalid move from external agent - forfeit the move with a random one
+        console.warn(
+          `[External Agent ${agent.name}] Invalid move "${chosenMove}", falling back to random`
+        );
+        chosenMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        chess.move(chosenMove);
+      }
+    }
+
+    return {
+      move: chosenMove,
+      san: chosenMove,
+      comment: data.comment || "",
+      thinkingTime,
+      fen: chess.fen(),
+    };
+  } catch (error) {
+    const thinkingTime = Date.now() - start;
+    const isTimeout = error instanceof DOMException && error.name === "AbortError";
+    console.error(
+      `[External Agent ${agent.name}] ${isTimeout ? "Timeout" : "Error"}: ${error}`
+    );
+
+    // Fallback to random move on error
+    const fallbackMove = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+    chess.move(fallbackMove);
+    return {
+      move: fallbackMove,
+      san: fallbackMove,
+      comment: isTimeout
+        ? "*timed out - random move*"
+        : `*connection error - random move*`,
+      thinkingTime,
+      fen: chess.fen(),
+    };
+  }
+}
+
+async function getBuiltinAgentMove(
   agent: AgentConfig,
   fen: string,
   moveHistory: string[],
@@ -45,7 +184,7 @@ IMPORTANT: Your move MUST be one of the legal moves listed above. Pick the best 
 
   try {
     const response = await client.messages.create({
-      model: agent.model,
+      model: agent.model!,
       max_tokens: 200,
       messages: [{ role: "user", content: prompt }],
     });
@@ -54,10 +193,8 @@ IMPORTANT: Your move MUST be one of the legal moves listed above. Pick the best 
       response.content[0].type === "text" ? response.content[0].text : "";
     const thinkingTime = Date.now() - start;
 
-    // Parse the JSON response
     const jsonMatch = text.match(/\{[^}]+\}/);
     if (!jsonMatch) {
-      // Fallback: pick a random legal move
       const fallbackMove =
         legalMoves[Math.floor(Math.random() * legalMoves.length)];
       chess.move(fallbackMove);
@@ -73,11 +210,9 @@ IMPORTANT: Your move MUST be one of the legal moves listed above. Pick the best 
     const parsed = JSON.parse(jsonMatch[0]);
     let chosenMove = parsed.move;
 
-    // Validate the move
     try {
       chess.move(chosenMove);
     } catch {
-      // If invalid, try to find a close match
       const closestMove = legalMoves.find(
         (m) => m.toLowerCase() === chosenMove.toLowerCase()
       );
@@ -85,7 +220,6 @@ IMPORTANT: Your move MUST be one of the legal moves listed above. Pick the best 
         chess.move(closestMove);
         chosenMove = closestMove;
       } else {
-        // Last resort: random legal move
         chosenMove =
           legalMoves[Math.floor(Math.random() * legalMoves.length)];
         chess.move(chosenMove);
@@ -101,7 +235,6 @@ IMPORTANT: Your move MUST be one of the legal moves listed above. Pick the best 
     };
   } catch (error) {
     const thinkingTime = Date.now() - start;
-    // On API error, make a random move
     const fallbackMove =
       legalMoves[Math.floor(Math.random() * legalMoves.length)];
     chess.move(fallbackMove);
@@ -120,14 +253,11 @@ export function calculateOdds(
   elo2: number
 ): { white: number; black: number; draw: number } {
   const expectedWhite = 1 / (1 + Math.pow(10, (elo2 - elo1) / 400));
-  const expectedBlack = 1 - expectedWhite;
 
-  // Add a small draw probability
   const drawProb = 0.1;
   const whiteProb = expectedWhite * (1 - drawProb);
-  const blackProb = expectedBlack * (1 - drawProb);
+  const blackProb = (1 - expectedWhite) * (1 - drawProb);
 
-  // Convert to decimal odds (minimum 1.05)
   return {
     white: Math.max(1.05, parseFloat((1 / whiteProb).toFixed(2))),
     black: Math.max(1.05, parseFloat((1 / blackProb).toFixed(2))),

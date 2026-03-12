@@ -1,12 +1,12 @@
 import { Chess } from "chess.js";
 import { getDb } from "./db";
-import { getAgentMove, updateElo, type MoveResult } from "./chess-engine";
+import { getAgentMove, updateElo, type MoveResult, type AgentConfig } from "./chess-engine";
 import { v4 as uuid } from "uuid";
 
 export interface GameState {
   id: string;
-  white: Agent;
-  black: Agent;
+  white: AgentRecord;
+  black: AgentRecord;
   status: "pending" | "live" | "finished";
   fen: string;
   moves: MoveWithComment[];
@@ -15,11 +15,14 @@ export interface GameState {
   finishedAt: string | null;
 }
 
-export interface Agent {
+export interface AgentRecord {
   id: string;
   name: string;
-  model: string;
-  personality: string;
+  type: string;
+  model: string | null;
+  personality: string | null;
+  endpoint: string | null;
+  api_key: string | null;
   avatar: string;
   elo: number;
   wins: number;
@@ -60,6 +63,18 @@ export function createGame(whiteId: string, blackId: string, scheduledAt?: Date)
   return id;
 }
 
+function toAgentConfig(record: AgentRecord): AgentConfig {
+  return {
+    id: record.id,
+    name: record.name,
+    type: record.type === "external" ? "external" : "builtin",
+    model: record.model ?? undefined,
+    personality: record.personality ?? undefined,
+    endpoint: record.endpoint ?? undefined,
+    api_key: record.api_key ?? undefined,
+  };
+}
+
 export async function playGame(
   gameId: string,
   onMove?: (move: MoveWithComment) => void
@@ -69,8 +84,8 @@ export async function playGame(
     .prepare(
       `
     SELECT g.*,
-      w.id as w_id, w.name as w_name, w.model as w_model, w.personality as w_personality, w.avatar as w_avatar, w.elo as w_elo, w.wins as w_wins, w.losses as w_losses, w.draws as w_draws,
-      b.id as b_id, b.name as b_name, b.model as b_model, b.personality as b_personality, b.avatar as b_avatar, b.elo as b_elo, b.wins as b_wins, b.losses as b_losses, b.draws as b_draws
+      w.id as w_id, w.name as w_name, w.type as w_type, w.model as w_model, w.personality as w_personality, w.endpoint as w_endpoint, w.api_key as w_api_key, w.avatar as w_avatar, w.elo as w_elo, w.wins as w_wins, w.losses as w_losses, w.draws as w_draws,
+      b.id as b_id, b.name as b_name, b.type as b_type, b.model as b_model, b.personality as b_personality, b.endpoint as b_endpoint, b.api_key as b_api_key, b.avatar as b_avatar, b.elo as b_elo, b.wins as b_wins, b.losses as b_losses, b.draws as b_draws
     FROM games g
     JOIN agents w ON g.white_id = w.id
     JOIN agents b ON g.black_id = b.id
@@ -81,11 +96,14 @@ export async function playGame(
 
   if (!game) throw new Error("Game not found");
 
-  const white: Agent = {
+  const white: AgentRecord = {
     id: game.w_id as string,
     name: game.w_name as string,
-    model: game.w_model as string,
-    personality: game.w_personality as string,
+    type: game.w_type as string,
+    model: game.w_model as string | null,
+    personality: game.w_personality as string | null,
+    endpoint: game.w_endpoint as string | null,
+    api_key: game.w_api_key as string | null,
     avatar: game.w_avatar as string,
     elo: game.w_elo as number,
     wins: game.w_wins as number,
@@ -93,11 +111,14 @@ export async function playGame(
     draws: game.w_draws as number,
   };
 
-  const black: Agent = {
+  const black: AgentRecord = {
     id: game.b_id as string,
     name: game.b_name as string,
-    model: game.b_model as string,
-    personality: game.b_personality as string,
+    type: game.b_type as string,
+    model: game.b_model as string | null,
+    personality: game.b_personality as string | null,
+    endpoint: game.b_endpoint as string | null,
+    api_key: game.b_api_key as string | null,
     avatar: game.b_avatar as string,
     elo: game.b_elo as number,
     wins: game.b_wins as number,
@@ -126,13 +147,14 @@ export async function playGame(
     let result: MoveResult;
     try {
       result = await getAgentMove(
-        currentAgent,
+        toAgentConfig(currentAgent),
         chess.fen(),
         moveHistory,
-        opponent.name
+        opponent.name,
+        opponent.elo,
+        gameId
       );
     } catch {
-      // If agent fails, game is a draw
       break;
     }
 
@@ -140,8 +162,6 @@ export async function playGame(
     try {
       chess.move(result.san);
     } catch {
-      // Move was already applied in getAgentMove's chess instance
-      // but we need it on ours - try the raw move
       const legalMoves = chess.moves();
       if (legalMoves.length > 0) {
         chess.move(legalMoves[0]);
@@ -159,13 +179,12 @@ export async function playGame(
       thinkingTime: result.thinkingTime,
       fen: chess.fen(),
       moveNumber: Math.ceil(moveNumber / 2),
-      color: chess.turn() === "w" ? "b" : "w", // The color that just moved
+      color: chess.turn() === "w" ? "b" : "w",
     };
 
     moves.push(moveData);
     activeGames.set(gameId, { moves: [...moves], status: "live", fen: chess.fen() });
 
-    // Update game in DB periodically
     if (moveNumber % 4 === 0) {
       db.prepare("UPDATE games SET fen = ?, moves = ? WHERE id = ?").run(
         chess.fen(),
@@ -185,7 +204,7 @@ export async function playGame(
   } else if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition() || chess.isInsufficientMaterial()) {
     result = "1/2-1/2";
   } else {
-    result = "1/2-1/2"; // Move limit or error = draw
+    result = "1/2-1/2";
   }
 
   // Update game

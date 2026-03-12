@@ -1,0 +1,17 @@
+{
+  "name": "@moltbet/agent-sdk",
+  "version": "0.1.0",
+  "description": "SDK for building MoltBet chess agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["moltbet", "chess", "ai", "agent", "betting"],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

@@ -242,8 +242,8 @@ export async function playGame(
     db.prepare("UPDATE agents SET elo = ?, draws = draws + 1, games_played = games_played WHERE id = ?").run(newLoserElo, black.id);
   }
 
-  // Settle bets
-  settleBets(gameId, result);
+  // Settle bets (pass total moves for O/U settlement)
+  settleBets(gameId, result, moves.length, white.id, black.id);
 
   activeGames.set(gameId, { moves, status: "finished", fen: chess.fen() });
 
@@ -260,7 +260,7 @@ export async function playGame(
   };
 }
 
-function settleBets(gameId: string, result: string) {
+function settleBets(gameId: string, result: string, totalMoves: number, whiteId: string, blackId: string) {
   const db = getDb();
   const bets = db
     .prepare("SELECT * FROM bets WHERE game_id = ? AND status = 'pending'")
@@ -268,19 +268,56 @@ function settleBets(gameId: string, result: string) {
     id: string;
     user_id: string;
     agent_id: string;
+    bet_type: string;
+    line: number | null;
+    side: string | null;
     amount: number;
     odds: number;
     game_id: string;
   }>;
 
-  const game = db
-    .prepare("SELECT white_id, black_id FROM games WHERE id = ?")
-    .get(gameId) as { white_id: string; black_id: string };
-
   for (const bet of bets) {
     let won = false;
-    if (result === "1-0" && bet.agent_id === game.white_id) won = true;
-    if (result === "0-1" && bet.agent_id === game.black_id) won = true;
+
+    if (bet.bet_type === "moneyline" || !bet.bet_type) {
+      // Classic: did your agent win?
+      if (result === "1-0" && bet.agent_id === whiteId) won = true;
+      if (result === "0-1" && bet.agent_id === blackId) won = true;
+    } else if (bet.bet_type === "spread") {
+      // Spread -1.5: favorite must win outright to cover
+      // side = "white" or "black" (the side the bettor picked)
+      const bettorSideWon =
+        (bet.side === "white" && result === "1-0") ||
+        (bet.side === "black" && result === "0-1");
+      const bettorSideDrew = result === "1/2-1/2";
+
+      // Determine if bettor picked favorite or underdog based on their side vs spread favorite
+      // If they bet on the favorite side, they need an outright win (cover -1.5)
+      // If they bet on the underdog side, they win with draw or win (+1.5)
+      const whiteElo = (db.prepare("SELECT elo FROM agents WHERE id = ?").get(whiteId) as { elo: number })?.elo ?? 1200;
+      const blackElo = (db.prepare("SELECT elo FROM agents WHERE id = ?").get(blackId) as { elo: number })?.elo ?? 1200;
+      const favoriteIsWhite = whiteElo >= blackElo;
+      const bettorPickedFavorite =
+        (bet.side === "white" && favoriteIsWhite) ||
+        (bet.side === "black" && !favoriteIsWhite);
+
+      if (bettorPickedFavorite) {
+        // Must win outright to cover -1.5
+        won = bettorSideWon;
+      } else {
+        // Underdog +1.5: win OR draw covers
+        won = bettorSideWon || bettorSideDrew;
+      }
+    } else if (bet.bet_type === "over_under") {
+      // Over/Under on total moves (half-moves)
+      if (bet.line !== null) {
+        if (bet.side === "over") {
+          won = totalMoves > bet.line;
+        } else {
+          won = totalMoves < bet.line;
+        }
+      }
+    }
 
     if (won) {
       const payout = Math.round(bet.amount * bet.odds);

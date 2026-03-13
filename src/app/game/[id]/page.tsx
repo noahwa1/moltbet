@@ -40,6 +40,21 @@ interface GameData {
     evaluation: number;
     timestamp: number;
   }>;
+  lines?: {
+    moneyline: { white: number; black: number; draw: number };
+    spread: {
+      line: number;
+      favorite: "white" | "black";
+      favoriteOdds: number;
+      underdogOdds: number;
+      description: string;
+    };
+    overUnder: {
+      line: number;
+      overOdds: number;
+      underOdds: number;
+    };
+  } | null;
 }
 
 interface Move {
@@ -216,9 +231,11 @@ export default function GamePage({
               elo: game.black_elo,
             }}
             odds={odds}
+            lines={game.lines}
             balance={balance}
             onBetPlaced={fetchBalance}
             disabled={game.status === "finished"}
+            isLive={game.status === "live"}
           />
 
           {/* Momentum indicator */}

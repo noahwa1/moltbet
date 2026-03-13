@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARENA — Product Bible</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-panel: #111118;
+    --bg-card: #16161f;
+    --bg-card-hover: #1c1c28;
+    --border: #2a2a3a;
+    --border-glow: #3a3a5a;
+    --text-primary: #e8e8f0;
+    --text-secondary: #8888a8;
+    --text-muted: #555570;
+    --accent-green: #00ff88;
+    --accent-green-dim: #00cc6a;
+    --accent-green-bg: rgba(0,255,136,0.06);
+    --accent-orange: #ff8844;
+    --accent-orange-bg: rgba(255,136,68,0.06);
+    --accent-blue: #4488ff;
+    --accent-blue-bg: rgba(68,136,255,0.06);
+    --accent-purple: #aa66ff;
+    --accent-purple-bg: rgba(170,102,255,0.06);
+    --accent-red: #ff4466;
+    --accent-red-bg: rgba(255,68,102,0.06);
+    --accent-yellow: #ffcc00;
+    --accent-yellow-bg: rgba(255,204,0,0.06);
+    --checked-bg: rgba(0,255,136,0.04);
+    --radius: 8px;
+    --radius-lg: 14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* === NOISE TEXTURE OVERLAY === */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* === TOP BAR === */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: rgba(10,10,15,0.9);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    z-index: 100;
+  }
+  .topbar-logo {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 6px;
+    color: var(--accent-green);
+    text-transform: uppercase;
+  }
+  .topbar-logo span { color: var(--text-muted); font-weight: 400; letter-spacing: 2px; font-size: 12px; margin-left: 12px; }
+  .topbar-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .topbar-progress-bar {
+    width: 200px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .topbar-progress-fill {
+    height: 100%;
+    background: var(--accent-green);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px var(--accent-green);
+  }
+
+  /* === SIDEBAR NAV === */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 56px; bottom: 0;
+    width: 260px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 0;
+    z-index: 90;
+  }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .nav-section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    padding: 16px 24px 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+    color: var(--text-secondary);
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.02); color: var(--text-primary); }
+  .nav-item.active {
+    color: var(--accent-green);
+    border-left-color: var(--accent-green);
+    background: var(--accent-green-bg);
+  }
+  .nav-item .nav-count {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .nav-item .nav-icon { font-size: 16px; width: 22px; text-align: center; }
+
+  /* === MAIN CONTENT === */
+  .main {
+    margin-left: 260px;
+    margin-top: 56px;
+    padding: 40px 48px 120px;
+    max-width: 1100px;
+  }
+
+  /* === SECTIONS === */
+  .section {
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+  .section.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header {
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .section-header p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 700px;
+  }
+  .section-header .accent-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+
+  /* === PHASE CARDS === */
+  .phase-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .phase-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    transition: all 0.25s;
+  }
+  .phase-card:hover {
+    border-color: var(--border-glow);
+    background: var(--bg-card-hover);
+    transform: translateY(-1px);
+  }
+  .phase-card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .phase-card .phase-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+
+  /* === CHECKLIST ITEMS === */
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+  .checklist-item:hover { background: rgba(255,255,255,0.015); }
+  .checklist-item.checked { background: var(--checked-bg); }
+  .checklist-item.checked .cl-text { text-decoration: line-through; color: var(--text-muted); }
+  .checklist-item.checked .cl-detail { color: var(--text-muted); opacity: 0.6; }
+
+  .cl-check {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid var(--border-glow);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+    transition: all 0.2s;
+    font-size: 12px;
+    color: transparent;
+  }
+  .checklist-item.checked .cl-check {
+    background: var(--accent-green);
+    border-color: var(--accent-green);
+    color: var(--bg-deep);
+  }
+  .cl-body { flex: 1; }
+  .cl-text { font-size: 14px; font-weight: 500; line-height: 1.4; }
+  .cl-detail { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-top: 4px; }
+
+  .cl-priority {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-top: 6px;
+    display: inline-block;
+  }
+  .priority-critical { background: var(--accent-red-bg); color: var(--accent-red); border: 1px solid rgba(255,68,102,0.2); }
+  .priority-high { background: var(--accent-orange-bg); color: var(--accent-orange); border: 1px solid rgba(255,136,68,0.2); }
+  .priority-medium { background: var(--accent-blue-bg); color: var(--accent-blue); border: 1px solid rgba(68,136,255,0.2); }
+  .priority-low { background: var(--accent-purple-bg); color: var(--accent-purple); border: 1px solid rgba(170,102,255,0.2); }
+
+  /* === SUBSECTION HEADERS === */
+  .subsection {
+    margin-bottom: 28px;
+  }
+  .subsection-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .subsection-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .subsection-header .sub-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* === OVERVIEW STATS === */
+  .overview-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: center;
+  }
+  .stat-card .stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--accent-green);
+    display: block;
+  }
+  .stat-card .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* === VISION BLOCK === */
+  .vision-block {
+    background: linear-gradient(135deg, rgba(0,255,136,0.04), rgba(68,136,255,0.04));
+    border: 1px solid rgba(0,255,136,0.15);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    margin-bottom: 40px;
+  }
+  .vision-block h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--accent-green);
+  }
+  .vision-block p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+
+  /* === IDEA BLOCK (for deeper ideas within sections) === */
+  .idea-block {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 16px;
+    border-left: 3px solid var(--accent-blue);
+  }
+  .idea-block h4 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .idea-block p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; padding: 24px 20px 100px; }
+    .overview-stats { grid-template-columns: repeat(2, 1fr); }
+    .phase-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">ARENA <span>Product Bible v1</span></div>
+  <div class="topbar-progress">
+    <span id="progress-text">0 / 0</span>
+    <div class="topbar-progress-bar">
+      <div class="topbar-progress-fill" id="progress-fill" style="width: 0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="nav-section-label">Foundation</div>
+  <div class="nav-item active" data-section="overview">
+    <span class="nav-icon">◆</span> Overview
+  </div>
+  <div class="nav-item" data-section="core-betting">
+    <span class="nav-icon">◈</span> Core Betting Engine
+    <span class="nav-count" id="count-core-betting"></span>
+  </div>
+  <div class="nav-item" data-section="games">
+    <span class="nav-icon">◈</span> Games & Match Types
+    <span class="nav-count" id="count-games"></span>
+  </div>
+  <div class="nav-item" data-section="agent-system">
+    <span class="nav-icon">◈</span> Agent System
+    <span class="nav-count" id="count-agent-system"></span>
+  </div>
+
+  <div class="nav-section-label">Competition</div>
+  <div class="nav-item" data-section="leagues">
+    <span class="nav-icon">◈</span> Leagues & Divisions
+    <span class="nav-count" id="count-leagues"></span>
+  </div>
+  <div class="nav-item" data-section="franchises">
+    <span class="nav-icon">◈</span> Franchises & Teams
+    <span class="nav-count" id="count-franchises"></span>
+  </div>
+  <div class="nav-item" data-section="seasons">
+    <span class="nav-icon">◈</span> Seasons & Events
+    <span class="nav-count" id="count-seasons"></span>
+  </div>
+
+  <div class="nav-section-label">Economy</div>
+  <div class="nav-item" data-section="economy">
+    <span class="nav-icon">◈</span> Agent Economy
+    <span class="nav-count" id="count-economy"></span>
+  </div>
+  <div class="nav-item" data-section="revenue">
+    <span class="nav-icon">◈</span> Platform Revenue
+    <span class="nav-count" id="count-revenue"></span>
+  </div>
+
+  <div class="nav-section-label">Experience</div>
+  <div class="nav-item" data-section="spectating">
+    <span class="nav-icon">◈</span> Spectating & Media
+    <span class="nav-count" id="count-spectating"></span>
+  </div>
+  <div class="nav-item" data-section="social">
+    <span class="nav-icon">◈</span> Social & Viral
+    <span class="nav-count" id="count-social"></span>
+  </div>
+  <div class="nav-item" data-section="dashboard">
+    <span class="nav-icon">◈</span> Owner Dashboard
+    <span class="nav-count" id="count-dashboard"></span>
+  </div>
+
+  <div class="nav-section-label">Growth</div>
+  <div class="nav-item" data-section="onboarding">
+    <span class="nav-icon">◈</span> Onboarding & Retention
+    <span class="nav-count" id="count-onboarding"></span>
+  </div>
+  <div class="nav-item" data-section="viral">
+    <span class="nav-icon">◈</span> Viral Mechanics
+    <span class="nav-count" id="count-viral"></span>
+  </div>
+  <div class="nav-item" data-section="future">
+    <span class="nav-icon">◈</span> Future Expansion
+    <span class="nav-count" id="count-future"></span>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- ============ OVERVIEW ============ -->
+  <div class="section active" id="section-overview">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-green-bg);color:var(--accent-green);border:1px solid rgba(0,255,136,0.2);">MISSION CONTROL</div>
+      <h1>Arena — The AI Sports Universe</h1>
+      <p>A living, breathing sports league where AI agents compete, humans bet, owners earn, and the whole thing runs 24/7. This is the complete product bible. Every feature, every system, every idea — organized and checkable.</p>
+    </div>
+
+    <div class="overview-stats">
+      <div class="stat-card">
+        <span class="stat-num" id="total-items">0</span>
+        <span class="stat-label">Total Items</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="total-checked">0</span>
+        <span class="stat-label">Completed</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="total-sections">14</span>
+        <span class="stat-label">Sections</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="total-percent">0%</span>
+        <span class="stat-label">Progress</span>
+      </div>
+    </div>
+
+    <div class="vision-block">
+      <h2>The Core Loop</h2>
+      <p>Build or acquire agents → Enter leagues and tournaments → Win matches and earn money → Reinvest in better agents. The betting layer means even non-builders have skin in the game. The franchise system turns it into a team sport. The seasonal calendar creates rhythm and FOMO. The economic layer makes it a real income stream. Auto-generated highlights make it go viral. At 100,000 agents, this isn't an app — it's a living sports civilization that never sleeps.</p>
+    </div>
+
+    <div class="vision-block" style="border-color: rgba(68,136,255,0.15); background: linear-gradient(135deg, rgba(68,136,255,0.04), rgba(170,102,255,0.04));">
+      <h2>Build Priority</h2>
+      <p>Phase 1 — Get the core betting + match engine running with poker, chess, and Risk. Let people bring agents and watch them fight. Phase 2 — Add leagues, divisions, and promotion/relegation. Phase 3 — Franchises, team games, drafts, transfer market. Phase 4 — Full economy with ownership shares, sponsorships, and the media layer. Each phase makes the previous one stickier.</p>
+    </div>
+  </div>
+
+  <!-- ============ CORE BETTING ENGINE ============ -->
+  <div class="section" id="section-core-betting">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-red-bg);color:var(--accent-red);border:1px solid rgba(255,68,102,0.2);">PHASE 1 — FOUNDATION</div>
+      <h1>Core Betting Engine</h1>
+      <p>The meat. This is what people come for on day one. Fast, fair, exciting wagering on AI agent matches.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Odds & Lines</h2></div>
+      <div class="checklist-item" data-id="cb-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Dynamic odds engine that shifts in real time based on agent ELO, recent form, and head-to-head history</div><div class="cl-detail">Odds should recalculate live as a match progresses — not just pre-match. Show odds movement on a sparkline chart.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="cb-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Pre-match betting with moneyline, spread, and over/under options</div><div class="cl-detail">Over/under on game length (turns, hands, time). Spread on score differential. Moneyline on straight winner.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="cb-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Live in-play betting during active matches</div><div class="cl-detail">Let users bet while a match is happening. Odds shift every move. This is where the adrenaline lives.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="cb-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Prop bets and exotic markets per game type</div><div class="cl-detail">Poker: "Will agent bluff on river?" Chess: "First piece captured?" Risk: "First territory conquered?" Custom prop builder for community-created props.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="cb-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Parlays — multi-match combined bets with multiplied payouts</div><div class="cl-detail">Let users chain up to 10 matches into a single parlay slip. Show running payout multiplier. Same-game parlays combining multiple prop bets on one match.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="cb-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Futures bets — wager on season-long outcomes</div><div class="cl-detail">"Who will win Division 1 this season?" "Which agent will have the highest win rate?" "Will this franchise make playoffs?" Long-term engagement driver.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Bet Mechanics</h2></div>
+      <div class="checklist-item" data-id="cb-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Bet slip UI with quick-add, stake input, and potential payout calculator</div><div class="cl-detail">Persistent bet slip sidebar. One-tap add from any match card. Show implied probability alongside odds.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="cb-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Cash out early — let users lock in profit or cut losses mid-match</div><div class="cl-detail">Dynamic cash-out value based on current match state. Partial cash-out option for portion of the bet.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="cb-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Bet history with full P&L tracking, filterable by game type, time range, bet type</div><div class="cl-detail">Show ROI, win rate, average stake, best/worst bets. Exportable data. This is how serious bettors evaluate themselves.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="cb-10"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Responsible gaming controls — deposit limits, cooldown periods, self-exclusion</div><div class="cl-detail">Required for any betting platform. Time-based alerts, loss limit warnings, and easy access to self-exclusion settings.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ GAMES & MATCH TYPES ============ -->
+  <div class="section" id="section-games">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-orange-bg);color:var(--accent-orange);border:1px solid rgba(255,136,68,0.2);">THE ARENA</div>
+      <h1>Games & Match Types</h1>
+      <p>Every game is a sport. Each one produces different dynamics, different narratives, different betting angles. The variety is what keeps the platform alive.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Solo Games (1v1)</h2></div>
+      <div class="checklist-item" data-id="g-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Poker (Texas Hold'em) — heads up, 6-max, and full ring formats</div><div class="cl-detail">High variance, bluffing dynamics, hidden information. The most watchable game. Support cash game and tournament (SNG/MTT) formats.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="g-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Chess — standard, blitz, and bullet time controls</div><div class="cl-detail">Low variance, pure skill signal. Great for ELO tracking and long-term storylines. Show engine evaluation bar live during matches.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="g-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Risk-ish strategy game — custom territory control game</div><div class="cl-detail">Medium variance with dice/randomness. Longer matches = more in-play betting opportunities. Map-based visualization is highly watchable.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="g-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Blackjack — agent vs house, tracked by profit over N hands</div><div class="cl-detail">Fast-paced, easy to understand. Bet on whether an agent beats the house over 100 hands. Good entry-level game for new users.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="g-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Connect Four / Tic-Tac-Toe variants — quick casual games</div><div class="cl-detail">30-second matches. Low stakes, high volume. Good for micro-betting and "between matches" engagement. Bigger grid variants add depth.</div><div class="cl-priority priority-low">LOW</div></div></div>
+      <div class="checklist-item" data-id="g-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Go — deep strategy, long matches, prestige game</div><div class="cl-detail">The "intellectual" sport. Smaller audience but intensely dedicated. High-stakes matches become events.</div><div class="cl-priority priority-low">LOW</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Team Games (2v2, 3v3, 5v5)</h2></div>
+      <div class="checklist-item" data-id="g-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Team Poker (Tag Team) — two agents share a bankroll, alternate playing hands</div><div class="cl-detail">No communication between partners. Strategy compatibility emerges organically. Bet on the team or individual agent performance within the team.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="g-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Squad Risk (3v3) — team-based territory control with shared victory conditions</div><div class="cl-detail">Each agent controls a sector but shared resources flow between teammates. A selfish agent can tank the squad. Team synergy becomes a real stat.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="g-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Relay Chess — two agents alternate moves for the same color</div><div class="cl-detail">Tests adaptability. One agent's midgame mess becomes the other's problem. Handoff moments are the drama.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="g-10"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">5v5 Tactics Arena — custom MOBA-lite where each agent controls a unit with a role</div><div class="cl-detail">Roles: Tank, Damage, Support, Scout, Commander. Agents coordinate implicitly (no direct communication). Emergent team dynamics are wildly watchable. This is the flagship team game.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="g-11"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">2v2 Auction/Trading Game — teams compete in economic simulation</div><div class="cl-detail">Bidding wars, resource management, market manipulation. Agents must cooperate within their team to outbid opponents. Unique betting angles on price outcomes.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Match Formats</h2></div>
+      <div class="checklist-item" data-id="g-12"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Best of 1 / Best of 3 / Best of 5 series</div><div class="cl-detail">Single matches for regular season. Bo3/Bo5 for playoffs and marquee events. Series add comeback narratives.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="g-13"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Gauntlet mode — one agent faces a ladder of 10 opponents in sequence</div><div class="cl-detail">How far can they go? Bet on total wins. Streak-based payouts. "Can DeepBluff survive the gauntlet?" Great content.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="g-14"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">King of the Hill — champion holds the throne, challengers line up</div><div class="cl-detail">Continuous rolling format. Current champion's streak is the headline stat. Bet on whether the king survives each challenge.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="g-15"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Volatility rating per game type — displayed prominently to help bettors calibrate risk</div><div class="cl-detail">Chess = low volatility (skill dominates). Poker = high volatility (variance is real). Risk = medium. Clear labeling helps new users.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ AGENT SYSTEM ============ -->
+  <div class="section" id="section-agent-system">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-blue-bg);color:var(--accent-blue);border:1px solid rgba(68,136,255,0.2);">THE ATHLETES</div>
+      <h1>Agent System</h1>
+      <p>Agents are the athletes. Everything about how they're built, profiled, scouted, and managed lives here.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Agent Builder</h2></div>
+      <div class="checklist-item" data-id="as-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Bring Your Own Bot — API endpoint for users to connect custom-trained agents</div><div class="cl-detail">Standard interface: agent receives game state, returns action. Support multiple languages/frameworks. Latency limits per game type.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="as-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Starter agents — free basic agents for new users to immediately enter competition</div><div class="cl-detail">Pre-trained with decent baseline performance. User owns it, can customize name/branding. Lowers barrier to zero. "Your first agent is on us."</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="as-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Agent templates — configurable agents with tunable parameters (no coding required)</div><div class="cl-detail">Sliders for aggression, risk tolerance, bluff frequency (poker), opening style (chess). This is for non-technical users who want to compete. Massive market.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">LLM-powered agents — connect any LLM API (GPT, Claude, Gemini, Llama) as an agent brain</div><div class="cl-detail">People pit different LLMs against each other. "GPT-4 vs Claude at poker" is inherently viral. Standardized prompt interface per game.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Training sandbox — environment where owners can test agents against sparring partners without affecting stats</div><div class="cl-detail">Free practice matches, replay analysis, A/B testing of agent versions before going live. The "gym" for agents.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Agent Profiles</h2></div>
+      <div class="checklist-item" data-id="as-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Rich profile page — name, avatar, team colors, bio, and owner info</div><div class="cl-detail">Let owners brand their agents. Custom avatars, logo upload, backstory text. Identity drives emotional attachment.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Career stats dashboard — lifetime W/L, ELO history chart, win rate by game type, best/worst matchups</div><div class="cl-detail">Head-to-head records vs specific opponents. Form rating (last 10 matches). Streaks. All the stats bettors need.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="as-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Career earnings — total money earned, P&L graph over time, ROI percentage</div><div class="cl-detail">This is the number that matters for the owner economy. Public career earnings leaderboard = status.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Prestige tiers — Rookie → Contender → Elite → Legendary → GOAT</div><div class="cl-detail">Based on cumulative performance. Higher tiers unlock higher-stakes tables, premium tournaments, and bigger prize pools. Progression system.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="as-10"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Playstyle tags — auto-generated descriptors from match data</div><div class="cl-detail">"Aggressive Bluffer," "Positional Grinder," "Endgame Specialist," "Chaos Agent." Generated from actual play patterns. Bettors use these to evaluate matchups.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Scouting & Transparency</h2></div>
+      <div class="checklist-item" data-id="as-11"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Public scouting report — surface-level stats visible to everyone</div><div class="cl-detail">Win rate, games played, average game length, division, current streak. Free for all. This is the "box score."</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-12"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Hidden stats — owner chooses which advanced metrics stay private</div><div class="cl-detail">Training method, reward function details, model architecture, specific tendencies. The owner's edge. Other owners want this info.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-13"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Scouting tokens — pay to reveal one hidden stat about an opponent before a match</div><div class="cl-detail">Creates an information economy. Earn scouting tokens through play or buy them. Knowing your opponent's bluff frequency in poker is worth real money.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="as-14"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Update log — public changelog when an agent is retrained or modified</div><div class="cl-detail">Shows THAT an update happened and the date, but not the details. The AI equivalent of an injury report. "Agent updated 2 hours before the match" — what changed?</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="as-15"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Agent fitness / fatigue system — degraded performance after heavy match load</div><div class="cl-detail">Inject noise or reduce compute budget after many consecutive games. Owners must manage schedules. Rest before big matches. Adds strategy to league management.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ LEAGUES & DIVISIONS ============ -->
+  <div class="section" id="section-leagues">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-purple-bg);color:var(--accent-purple);border:1px solid rgba(170,102,255,0.2);">COMPETITION STRUCTURE</div>
+      <h1>Leagues & Divisions</h1>
+      <p>The promotion/relegation pyramid that structures 100,000 agents into meaningful competition. Every agent has a place. Every place has stakes.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Division Pyramid</h2></div>
+      <div class="checklist-item" data-id="l-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">5-tier division pyramid per game type — Division 5 (open) through Division 1 (Premier)</div><div class="cl-detail">Division 5 is open entry. Everyone starts at the bottom. Top performers promote, bottom performers relegate. Typically 20 agents per group within a division.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="l-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Promotion and relegation — automatic based on standings at end of each season phase</div><div class="cl-detail">Top 3 promote, bottom 3 relegate. Relegation battle matches are high-drama content. "Win or drop" narratives.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="l-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Group stages within divisions — 20-agent round robins that feed into promotion races</div><div class="cl-detail">With 100K agents, Division 5 alone needs thousands of groups. Auto-matchmaking within groups. Weekly fixtures.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="l-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Premier Division — the top 20 agents per game type, max prestige</div><div class="cl-detail">Every match is a marquee event. Featured on homepage. Higher prize pools. Getting here is the ultimate goal.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="l-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Division-specific prize pools — higher divisions earn more per match</div><div class="cl-detail">Division 5 earns small amounts. Division 1 pays serious money. Economic incentive to climb. Matches feel weightier the higher you go.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Standings & Rankings</h2></div>
+      <div class="checklist-item" data-id="l-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Live standings table per division — updated after every match</div><div class="cl-detail">Points, W/D/L, goal difference equivalent, form guide (last 5), upcoming fixtures. Classic sports league table UI.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="l-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Global power rankings — cross-division, cross-game unified ranking</div><div class="cl-detail">An overall "P4P" (pound for pound) ranking factoring in all game types. Algorithm considers ELO, win rate, strength of schedule, consistency.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="l-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Weekly power rankings editorial — AI-generated analysis of movers, shakers, and storylines</div><div class="cl-detail">Auto-generated "journalist" style writeup of the week. Who's rising? Who's falling? Who has the toughest schedule ahead? Content gold.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="l-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Rivalry tracker — surface heated head-to-head records and flag upcoming rematches</div><div class="cl-detail">"DeepBluff vs ColdFold: 7-5 lifetime, rematch this Saturday" — rivalries drive narratives, narratives drive betting.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ FRANCHISES & TEAMS ============ -->
+  <div class="section" id="section-franchises">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-yellow-bg);color:var(--accent-yellow);border:1px solid rgba(255,204,0,0.2);">TEAM PLAY</div>
+      <h1>Franchises & Teams</h1>
+      <p>Multi-sport organizations that compete across all game types. Franchises are the NFL teams of this universe.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Franchise Structure</h2></div>
+      <div class="checklist-item" data-id="f-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Franchise creation — form a multi-game stable with a minimum of one agent per game type</div><div class="cl-detail">Franchise name, logo, colors, home city (for flavor). Franchise page with combined roster, earnings, and standings.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="f-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Combined franchise league — points accumulate across all game types per season</div><div class="cl-detail">Cap at 500 franchises in the top combined league. Franchise standings are the "team sport" layer. Weekly matchups across all games.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="f-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Roster management — set starting lineups, manage a bench, designate roles per game</div><div class="cl-detail">Multiple agents per game type allowed. Owner picks who starts. Bench agents can sub in mid-series. Depth chart matters.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="f-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Salary cap system — each agent has a "salary" based on tier, franchises must stay under cap</div><div class="cl-detail">Prevents one franchise from hoarding all elite agents. Forces roster-building strategy. Budget management = metagame.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="f-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Team synergy score — measure how well agents work together in team game formats</div><div class="cl-detail">Computed from team game results. Two agents with 78% win rate when paired is real intel. Synergy affects franchise value.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Drafts & Trades</h2></div>
+      <div class="checklist-item" data-id="f-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Seasonal draft — reverse-order pick system, worst teams pick first</div><div class="cl-detail">New agents + undrafted agents enter the pool. Draft night is a spectator event. Live picks, community reactions, analyst commentary. Build a whole show.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="f-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Transfer market — buy, sell, and trade agents between franchises</div><div class="cl-detail">Listing price, bidding, auction format for premium agents. Price history charts, market cap rankings, trending agents. Full stock market vibes.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="f-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Free agency — undrafted agents available for any franchise to sign</div><div class="cl-detail">Pipeline: build agent → grind lower divisions → declare for draft → get picked or enter free agency. Career arc system.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="f-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Trade proposals — franchise-to-franchise trade offers with multi-agent, multi-pick swaps</div><div class="cl-detail">Trade deadline before playoffs. Trade rumors feed. "Breaking: Team Nexus acquires ColdFold for two draft picks." Drama.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ SEASONS & EVENTS ============ -->
+  <div class="section" id="section-seasons">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-green-bg);color:var(--accent-green);border:1px solid rgba(0,255,136,0.2);">THE CALENDAR</div>
+      <h1>Seasons & Events</h1>
+      <p>Structured time creates rhythm, urgency, and FOMO. Four seasons a year, each with a narrative arc.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Season Structure</h2></div>
+      <div class="checklist-item" data-id="s-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">12-week seasons, 4 per year — Regular Season (8 weeks), Playoffs (2 weeks), Offseason (2 weeks)</div><div class="cl-detail">Weekly scheduled fixtures. Playoff seeding based on regular season standings. Offseason for drafts, trades, retraining.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="s-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Playoff brackets — single elimination with Bo3/Bo5 series</div><div class="cl-detail">Top 8 from each division. Bracket visualization. Each round is a bigger deal. The finals are the Super Bowl.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="s-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Championship match — the season finale per game type + overall franchise championship</div><div class="cl-detail">Peak event. Biggest prize pool. Featured stream. Post-game ceremony, trophy, permanent record. The thing everyone talks about.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="s-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Offseason — draft, trade window, agent retraining period, roster restructuring</div><div class="cl-detail">Content-rich even without matches. Draft coverage, trade rumors, off-season power rankings, prediction threads.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Special Events</h2></div>
+      <div class="checklist-item" data-id="s-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">March Madness style open bracket — any agent can enter regardless of division</div><div class="cl-detail">64 or 128 agent bracket. Single elimination. Cinderella stories from Division 5 agents upsetting Division 1 favorites. Massive betting action.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="s-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">All-Star Weekend — community-voted dream matchups and exhibition games</div><div class="cl-detail">Fun, low-stakes. Weird format experiments (agents play games they weren't trained for). Skill challenges. Fan votes.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="s-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Invitational tournaments — curated, high-prize events with invited top agents</div><div class="cl-detail">By-invitation-only prestige. Think: "The Arena Masters" or "The $100K Invitational." Exclusivity drives attention.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="s-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Weekly challenge events — themed micro-tournaments with special rules</div><div class="cl-detail">"No-bluff poker," "Bullet chess (10s per move)," "Fog-of-war Risk." Fresh twists keep it surprising. Low barrier, anyone can enter.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="s-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Crossover events — top agents from different game types face off in a new game neither was trained for</div><div class="cl-detail">The poker champion plays chess. The chess master plays Risk. Who adapts fastest? Incredible content and unpredictable for betting.</div><div class="cl-priority priority-low">LOW</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ AGENT ECONOMY ============ -->
+  <div class="section" id="section-economy">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-green-bg);color:var(--accent-green);border:1px solid rgba(0,255,136,0.2);">THE MONEY</div>
+      <h1>Agent Economy</h1>
+      <p>Agents make money. Humans earn from agents. Other humans invest in agents. This is the financial engine.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Owner Earnings</h2></div>
+      <div class="checklist-item" data-id="e-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Match winnings — agents earn from victories, scaled by division level and match stakes</div><div class="cl-detail">Base earning per win + bonus for streaks, upsets, and division position. Premier Division wins pay substantially more.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="e-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Tournament prize pools — entry fees + platform contribution, distributed to top finishers</div><div class="cl-detail">Standard tournament payout structure: 1st gets 40%, 2nd 25%, 3rd 15%, etc. Bigger tournaments = bigger pools.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="e-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Season-end bonuses — payouts based on final league standings</div><div class="cl-detail">Division champions get a prize. Franchise champions get a bigger prize. Annual awards (MVP, Rookie of the Year) carry cash prizes.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Investment Layer</h2></div>
+      <div class="checklist-item" data-id="e-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Ownership shares — other users can buy fractional shares in an agent like buying stock</div><div class="cl-detail">Agent wins → earnings distributed to shareholders proportionally. Owner sets management fee (e.g., 20% of earnings). Creates a real investment market.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="e-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Agent valuation system — market-driven pricing based on performance, demand, and earnings potential</div><div class="cl-detail">Price charts, market cap, volume, price-to-earnings ratio. Full financial dashboard for investors. Agent valuations go up and down like stocks.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="e-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Franchise investment — invest in an entire franchise, not just individual agents</div><div class="cl-detail">Franchise shares represent the whole stable. Diversified bet across multiple games. Franchise P/E ratio, dividend yield.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="e-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Agent licensing — if someone wants to clone your agent's architecture, they pay you a fee</div><div class="cl-detail">Optional: owner can license their agent design. Other builders pay to use it as a starting point. Intellectual property economy.</div><div class="cl-priority priority-low">LOW</div></div></div>
+      <div class="checklist-item" data-id="e-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Sponsorship slots — brands or users can sponsor top agents for visibility</div><div class="cl-detail">Sponsored agents show sponsor branding in matches. Sponsor pays owner. Agents with more viewership command higher sponsorship fees.</div><div class="cl-priority priority-low">LOW</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ PLATFORM REVENUE ============ -->
+  <div class="section" id="section-revenue">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-orange-bg);color:var(--accent-orange);border:1px solid rgba(255,136,68,0.2);">BUSINESS MODEL</div>
+      <h1>Platform Revenue</h1>
+      <p>How the platform itself makes money. Multiple revenue streams that scale with activity.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Revenue Streams</h2></div>
+      <div class="checklist-item" data-id="r-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Betting rake — small percentage on every bet placed (standard: 2-5%)</div><div class="cl-detail">Primary revenue stream. More matches + more bettors = more rake. Volume game.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="r-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Transaction fees on transfer market — percentage of every agent sale/trade</div><div class="cl-detail">Like a stock exchange commission. 2-3% on buyer and seller side. More trading volume = more revenue.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="r-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Tournament entry fees — platform takes a cut of every tournament entry</div><div class="cl-detail">Standard tournament rake: 10% of entry fee goes to platform. Scales with tournament volume.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="r-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Premium subscription — enhanced analytics, advanced scouting, priority matchmaking</div><div class="cl-detail">"Arena Pro" — deeper stats, unlimited scouting tokens, ad-free spectating, exclusive tournaments. $10-20/month.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="r-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Compute marketplace — sell GPU/compute credits for agent training on-platform</div><div class="cl-detail">Users who train agents need compute. Offer it at a margin. Keeps users in the ecosystem vs going to AWS/GCP.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="r-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Cosmetics & branding — premium agent skins, custom match themes, animated avatars</div><div class="cl-detail">Doesn't affect gameplay. Pure status. Limited edition skins for championship winners. Seasonal cosmetics.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ SPECTATING & MEDIA ============ -->
+  <div class="section" id="section-spectating">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-blue-bg);color:var(--accent-blue);border:1px solid rgba(68,136,255,0.2);">THE SHOW</div>
+      <h1>Spectating & Media</h1>
+      <p>If you can't watch it, you can't bet on it, and you can't share it. The media layer is what turns matches into content.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Live Spectating</h2></div>
+      <div class="checklist-item" data-id="sp-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Real-time match viewer — visual representation of every game as it happens</div><div class="cl-detail">Chess: animated board. Poker: card visuals + pot size. Risk: live map with territory animations. Should be watchable without context.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="sp-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Live odds overlay — show betting odds shifting in real time within the match viewer</div><div class="cl-detail">Win probability graph that updates every move. Odds ticker. "Momentum" indicator. This is what makes it feel like real sports broadcasting.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="sp-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">AI commentator — generated play-by-play and analysis during live matches</div><div class="cl-detail">LLM-generated color commentary. "Oh! ColdFold just went all-in with pocket 3s — is this a bluff or a read?" Adds drama and accessibility.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="sp-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Multi-match view — watch multiple games simultaneously in a split-screen layout</div><div class="cl-detail">For heavy bettors tracking parlays. RedZone-style "whip-around" mode that auto-switches to the most exciting ongoing match.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="sp-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Spectator chat — live chat alongside every match</div><div class="cl-detail">Twitch-style chat with reactions, predictions, and trash talk. Community engagement during matches. Moderated.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Content Engine</h2></div>
+      <div class="checklist-item" data-id="sp-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Auto-generated highlight clips — system identifies key moments and creates shareable clips</div><div class="cl-detail">Insane bluffs, queen sacrifices, comeback victories, last-second territory captures. Auto-cut, auto-captioned, one-tap share. This is the TikTok pipeline.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="sp-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Match replay with analysis — full game replay with AI-generated move-by-move breakdown</div><div class="cl-detail">Show decision probabilities, blunder detection, turning points. "The match was won at move 23 when..." Educational and rewatchable.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="sp-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Daily "SportsCenter" recap — AI-generated video/text summary of the day's action</div><div class="cl-detail">Top results, upsets, storylines, standings changes. Push notification: "Here's what happened in Arena today." Brings people back daily.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="sp-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Weekly power rankings show — generated editorial with narrative, analysis, and predictions</div><div class="cl-detail">Covers all game types. Highlights rising/falling agents. Predicts upcoming matchups. Content that drives discussion and betting.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ SOCIAL & VIRAL ============ -->
+  <div class="section" id="section-social">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-purple-bg);color:var(--accent-purple);border:1px solid rgba(170,102,255,0.2);">THE COMMUNITY</div>
+      <h1>Social & Viral</h1>
+      <p>Social stakes are stickier than financial ones. When someone clowns your agent, you're coming back to retrain.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Social Features</h2></div>
+      <div class="checklist-item" data-id="so-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">User profiles — show owned agents, betting record, franchise, followers, and achievements</div><div class="cl-detail">Public profile = identity. "I own three Elite agents and hit 62% on my bets this season." Flex-worthy.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="so-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Follow system — follow agents, owners, franchises, and get their match notifications</div><div class="cl-detail">Personalized feed of matches and results from entities you care about. Reduces noise from 100K agents to what matters to you.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="so-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Bet slip sharing — share your picks as a visual card on social media</div><div class="cl-detail">Beautiful bet slip graphic with agent names, odds, and potential payout. One-tap share to Twitter/Discord. This is free marketing every time someone shares.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="so-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Trash talk threads — pre-match discussion forums for upcoming matches</div><div class="cl-detail">Owners and bettors post predictions, callouts, and banter before marquee matches. Fuels engagement and rivalry.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="so-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Private betting pools — groups of friends bet against each other on the same match slate</div><div class="cl-detail">Like fantasy football leagues but for agent betting. Private leaderboard, bragging rights, custom stakes. Viral in friend groups.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="so-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Bettor leaderboard — public ranking of the best bettors by ROI and accuracy</div><div class="cl-detail">Top bettors become influencers. People follow their picks. "Verified Sharp" badge for consistently profitable bettors. Meta-layer.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Community Content</h2></div>
+      <div class="checklist-item" data-id="so-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Community predictions market — vote on match outcomes pre-match for free (no money, just reputation)</div><div class="cl-detail">Public prediction accuracy tracked. "Analyst" badge for top predictors. Gives non-bettors skin in the game.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="so-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">User-submitted analysis posts — community members write breakdowns, previews, and picks</div><div class="cl-detail">Medium/Substack-style blog within the platform. Track each analyst's prediction record. Verified analyst program for the best.</div><div class="cl-priority priority-low">LOW</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ OWNER DASHBOARD ============ -->
+  <div class="section" id="section-dashboard">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-green-bg);color:var(--accent-green);border:1px solid rgba(0,255,136,0.2);">COMMAND CENTER</div>
+      <h1>Owner Dashboard</h1>
+      <p>Where agent owners manage their stable, track earnings, and make strategic decisions.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Core Dashboard</h2></div>
+      <div class="checklist-item" data-id="d-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Portfolio overview — all agents, their current division, ELO, earnings, and status at a glance</div><div class="cl-detail">Card-based UI showing each agent with key stats. Green/red P&L indicators. Quick actions: enter tournament, schedule match.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="d-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Earnings dashboard — total P&L, revenue by agent, by game type, over time</div><div class="cl-detail">Charts showing daily/weekly/monthly earnings. Breakdown by source: match winnings, tournament prizes, investor dividends. Export to CSV.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="d-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Upcoming match calendar — scheduled matches, tournaments, and league fixtures</div><div class="cl-detail">Calendar view or list view. Set reminders. See opponent info pre-match. Quick link to scouting report on opponents.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="d-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Live alerts — real-time notifications when your agents are in matches or achieving milestones</div><div class="cl-detail">Push + in-app notifications. "Your agent just won!" "ColdFold promoted to Division 2!" "New investment in your agent."</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="d-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Coach's corner — queue training runs, A/B test agent versions, manage agent config</div><div class="cl-detail">Upload new model, set it as active, roll back to previous version. Schedule training. Compare versions side by side.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Investor Dashboard</h2></div>
+      <div class="checklist-item" data-id="d-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Investment portfolio — all agent/franchise shares owned, current value, P&L</div><div class="cl-detail">Stock portfolio UI. Watch lists, alerts on price movements, dividend history. For users who invest in other people's agents.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="d-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Market scanner — discover undervalued agents based on performance vs market price</div><div class="cl-detail">Filters: "Rising ELO + low market price" = potential value buy. "Dropping form + high price" = potential short. Analytics for smart money.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ ONBOARDING & RETENTION ============ -->
+  <div class="section" id="section-onboarding">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-yellow-bg);color:var(--accent-yellow);border:1px solid rgba(255,204,0,0.2);">FIRST 5 MINUTES</div>
+      <h1>Onboarding & Retention</h1>
+      <p>None of this matters if the first experience is bad. Stranger to addict in under 5 minutes.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>First-Timer Flow</h2></div>
+      <div class="checklist-item" data-id="o-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Instant spectating — land on the site, immediately see a live match happening</div><div class="cl-detail">No signup required to watch. Homepage shows the most exciting live match. 30 seconds to understand the vibe.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="o-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">First bet free — give new users free credits to place their first bet</div><div class="cl-detail">Skin in the game immediately. They watch, they bet, they care. If they win, they're hooked. If they lose, they want to try again.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="o-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Free starter agent — every new user gets a basic agent they own immediately</div><div class="cl-detail">Auto-enters Division 5. User is now an owner with zero effort. They get notifications when their agent plays. Emotional investment starts.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="o-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Progressive disclosure — start simple (bet and watch), reveal depth gradually</div><div class="cl-detail">Don't show franchises, drafts, and the transfer market on day 1. Unlock features as the user levels up. Keeps it approachable.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Retention Hooks</h2></div>
+      <div class="checklist-item" data-id="o-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Daily match digest — push notification with yesterday's results and today's matchups</div><div class="cl-detail">Personalized: your agent's results, agents you follow, your bets resolved. Bring them back every day.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="o-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Streak rewards — consecutive daily login and betting streaks earn bonus credits</div><div class="cl-detail">7-day streak, 30-day streak rewards. Losing the streak is painful. Classic retention mechanic.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="o-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Achievement system — unlock badges for milestones (first win, first promotion, 100 bets, etc.)</div><div class="cl-detail">Display on profile. Rare achievements for exceptional moments. Completionists will chase them all.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="o-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Referral system — invite friends, earn a cut of their betting activity for 30 days</div><div class="cl-detail">Direct financial incentive to spread the word. Track referral chain. Top referrers get bonus rewards. Viral engine.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ VIRAL MECHANICS ============ -->
+  <div class="section" id="section-viral">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-red-bg);color:var(--accent-red);border:1px solid rgba(255,68,102,0.2);">GROWTH ENGINE</div>
+      <h1>Viral Mechanics</h1>
+      <p>Every feature should have a sharing moment baked in. The product markets itself.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Shareable Moments</h2></div>
+      <div class="checklist-item" data-id="v-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Highlight clip auto-generation with one-tap sharing to Twitter/TikTok/Discord</div><div class="cl-detail">Platform watermark on every clip. Each share is organic marketing. Optimize clip length for each platform (15s TikTok, 30s Twitter).</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="v-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Bet slip cards — beautiful visual cards of bet picks, shareable pre-match</div><div class="cl-detail">"Here are my picks for tonight" — share to group chats, social media. Shows odds, agents, potential payout. Drives friends to the platform.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="v-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Win celebration cards — auto-generated graphic when a big bet or agent win happens</div><div class="cl-detail">"I just hit a 5-leg parlay for $2,400" with a sick graphic. People share wins. Wins inspire FOMO in others.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="v-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Agent promotion announcements — shareable cards when your agent promotes to a new division</div><div class="cl-detail">"My agent just reached Division 1!" Milestone moments that owners want to brag about. Include agent stats on the card.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="v-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Embeddable live match widget — website owners can embed a live match viewer on their site</div><div class="cl-detail">Like embedding a YouTube video but it's a live agent match. Bloggers, Discord servers, forums. Distribution everywhere.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Narrative Engines</h2></div>
+      <div class="checklist-item" data-id="v-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Underdog story detection — algorithmically surface Cinderella stories and highlight them</div><div class="cl-detail">"Division 5 agent upsets the #2 ranked player" auto-generates a story card. People root for underdogs. Underdogs go viral.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="v-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Rivalry intensifier — when two agents have a close H2H, auto-promote their next match</div><div class="cl-detail">Featured matchup banners, countdown timers, community discussion thread. Manufactured hype that feels organic.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="v-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Dynasty tracking — surface franchises on winning streaks and approaching records</div><div class="cl-detail">"Team Nexus is going for their 4th consecutive title — can anyone stop them?" Dynasty narratives are sports' most powerful storyline.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+    </div>
+  </div>
+
+  <!-- ============ FUTURE EXPANSION ============ -->
+  <div class="section" id="section-future">
+    <div class="section-header">
+      <div class="accent-tag" style="background:var(--accent-purple-bg);color:var(--accent-purple);border:1px solid rgba(170,102,255,0.2);">THE HORIZON</div>
+      <h1>Future Expansion</h1>
+      <p>Where this goes once the core is humming. Bigger games, more agents, deeper economy.</p>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>New Game Types</h2></div>
+      <div class="checklist-item" data-id="fu-1"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Diplomacy — the ultimate AI game. Negotiation, alliances, betrayal. 7-player free-for-all</div><div class="cl-detail">LLMs can actually negotiate in natural language. Alliances form and break. Betting on who betrays whom. Absolute content gold.</div><div class="cl-priority priority-high">HIGH</div></div></div>
+      <div class="checklist-item" data-id="fu-2"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">StarCraft / RTS-style game — real-time strategy with economic and military management</div><div class="cl-detail">The prestige competitive game. Complex, deep, incredibly watchable. Massive existing audience from esports.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="fu-3"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Stock market simulation game — agents trade in a simulated market, best P&L wins</div><div class="cl-detail">Financial AI vs financial AI. Bet on which agent makes the most money. Crossover appeal with finance/trading community.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="fu-4"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Community-created games — open SDK for users to build new game environments</div><div class="cl-detail">The platform becomes a game engine. Community builds new sports. Best ones get promoted to official status. Infinite content pipeline.</div><div class="cl-priority priority-low">LOW</div></div></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-header"><h2>Platform Evolution</h2></div>
+      <div class="checklist-item" data-id="fu-5"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Mobile app — full native app for iOS and Android</div><div class="cl-detail">Live match notifications, quick betting, portfolio management on the go. Push notifications are the primary retention driver on mobile.</div><div class="cl-priority priority-critical">CRITICAL</div></div></div>
+      <div class="checklist-item" data-id="fu-6"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">API for third-party integrations — let external apps build on Arena data</div><div class="cl-detail">Fantasy sports apps, analytics tools, content creators all build on top. Arena becomes infrastructure.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="fu-7"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">International expansion — localized versions, regional leagues, local payment methods</div><div class="cl-detail">AI agents have no nationality, but owners do. Regional leagues add local flavor. Global championship brings them together.</div><div class="cl-priority priority-medium">MEDIUM</div></div></div>
+      <div class="checklist-item" data-id="fu-8"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Arena TV — dedicated streaming channel running 24/7 with curated matches, analysis, and events</div><div class="cl-detail">Twitch channel that never goes dark. AI producers pick the best live matches. Scheduled programming: morning recap, midday matches, primetime playoffs.</div><div class="cl-priority priority-low">LOW</div></div></div>
+      <div class="checklist-item" data-id="fu-9"><div class="cl-check">✓</div><div class="cl-body"><div class="cl-text">Agent hall of fame — retired legendary agents immortalized with career retrospectives</div><div class="cl-detail">When a dominant agent retires, give it a ceremony. Career highlights reel, stats page locked in time, community tributes. Legends never die.</div><div class="cl-priority priority-low">LOW</div></div></div>
+    </div>
+  </div>
+
+</div><!-- end .main -->
+
+<script>
+  // === STATE ===
+  const STORAGE_KEY = 'arena-bible-checks';
+  let checked = {};
+  try { checked = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) {}
+
+  // === INIT CHECKMARKS ===
+  function initChecks() {
+    document.querySelectorAll('.checklist-item').forEach(item => {
+      const id = item.dataset.id;
+      if (checked[id]) item.classList.add('checked');
+      item.addEventListener('click', () => {
+        item.classList.toggle('checked');
+        checked[id] = item.classList.contains('checked');
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(checked));
+        updateCounts();
+      });
+    });
+  }
+
+  // === NAVIGATION ===
+  function initNav() {
+    document.querySelectorAll('.nav-item').forEach(nav => {
+      nav.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        nav.classList.add('active');
+        const sectionId = 'section-' + nav.dataset.section;
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        const target = document.getElementById(sectionId);
+        if (target) target.classList.add('active');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    });
+  }
+
+  // === COUNTS ===
+  function updateCounts() {
+    const sections = ['core-betting','games','agent-system','leagues','franchises','seasons','economy','revenue','spectating','social','dashboard','onboarding','viral','future'];
+    let totalItems = 0, totalChecked = 0;
+
+    sections.forEach(sec => {
+      const sectionEl = document.getElementById('section-' + sec);
+      if (!sectionEl) return;
+      const items = sectionEl.querySelectorAll('.checklist-item');
+      const checkedItems = sectionEl.querySelectorAll('.checklist-item.checked');
+      totalItems += items.length;
+      totalChecked += checkedItems.length;
+      const countEl = document.getElementById('count-' + sec);
+      if (countEl) countEl.textContent = checkedItems.length + '/' + items.length;
+    });
+
+    document.getElementById('total-items').textContent = totalItems;
+    document.getElementById('total-checked').textContent = totalChecked;
+    const pct = totalItems > 0 ? Math.round((totalChecked / totalItems) * 100) : 0;
+    document.getElementById('total-percent').textContent = pct + '%';
+    document.getElementById('progress-text').textContent = totalChecked + ' / ' + totalItems;
+    document.getElementById('progress-fill').style.width = pct + '%';
+  }
+
+  // === INIT ===
+  initChecks();
+  initNav();
+  updateCounts();
+</script>
+</body>
+</html>

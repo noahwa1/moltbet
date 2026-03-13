@@ -171,49 +171,49 @@ export default function GamePage({
         </div>
 
         {/* Player vs Player header */}
-        <div className="flex items-center justify-center gap-8">
-          <div className={`flex items-center gap-3 ${currentTurn === "white" && game.status === "live" ? "animate-pulse" : ""}`}>
-            <span className="text-4xl">{game.white_avatar}</span>
+        <div className="flex items-center justify-center gap-6 flex-wrap">
+          <div className={`flex items-center gap-2 ${currentTurn === "white" && game.status === "live" ? "animate-pulse" : ""}`}>
+            <span className="text-3xl">{game.white_avatar}</span>
             <div className="text-left">
-              <div className="font-bold text-white text-lg">{game.white_name}</div>
+              <div className="font-bold text-white">{game.white_name}</div>
               <div className="text-xs text-zinc-500">
-                ELO {game.white_elo} · {game.white_model}
+                ELO {game.white_elo}
               </div>
             </div>
             {currentTurn === "white" && game.status === "live" && (
-              <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse ml-2" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             )}
           </div>
 
           <div className="text-center">
             {game.result ? (
-              <div className={`text-3xl font-mono font-black ${
+              <div className={`text-2xl font-mono font-black ${
                 game.result === "1-0" ? "text-emerald-400" : game.result === "0-1" ? "text-red-400" : "text-zinc-400"
               }`}>
                 {game.result}
               </div>
             ) : (
-              <div className="text-3xl font-black text-zinc-600">VS</div>
+              <div className="text-2xl font-black text-zinc-600">VS</div>
             )}
           </div>
 
-          <div className={`flex items-center gap-3 ${currentTurn === "black" && game.status === "live" ? "animate-pulse" : ""}`}>
+          <div className={`flex items-center gap-2 ${currentTurn === "black" && game.status === "live" ? "animate-pulse" : ""}`}>
             {currentTurn === "black" && game.status === "live" && (
-              <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse mr-2" />
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             )}
             <div className="text-right">
-              <div className="font-bold text-white text-lg">{game.black_name}</div>
+              <div className="font-bold text-white">{game.black_name}</div>
               <div className="text-xs text-zinc-500">
-                ELO {game.black_elo} · {game.black_model}
+                ELO {game.black_elo}
               </div>
             </div>
-            <span className="text-4xl">{game.black_avatar}</span>
+            <span className="text-3xl">{game.black_avatar}</span>
           </div>
         </div>
       </div>
 
       {/* Main game area */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr_320px] gap-6 items-start">
         {/* Left: Betting */}
         <div className="space-y-4">
           <BettingPanel
@@ -275,7 +275,7 @@ export default function GamePage({
           )}
 
           {/* Odds sparkline */}
-          <OddsSparkline history={game.oddsHistory ?? []} width={320} height={120} />
+          <OddsSparkline history={game.oddsHistory ?? []} width={260} height={100} />
 
           {/* Move count / game stats */}
           <div className="glass rounded-xl p-4">
@@ -317,7 +317,7 @@ export default function GamePage({
 
         {/* Center: Chess Board */}
         <div className="flex justify-center">
-          <ChessBoard fen={game.fen} size={480} />
+          <ChessBoard fen={game.fen} size={440} />
         </div>
 
         {/* Right: Move log */}

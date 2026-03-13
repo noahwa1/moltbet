@@ -7,7 +7,12 @@ export async function GET(request: NextRequest) {
   const userId = authUser?.id ?? "guest";
   const db = getDb();
 
-  const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId) as Record<string, unknown>;
+  const user = (db.prepare("SELECT * FROM users WHERE id = ?").get(userId) as Record<string, unknown>) ?? {
+    id: "guest",
+    balance: 0,
+    total_won: 0,
+    total_lost: 0,
+  };
 
   const agents = db
     .prepare(

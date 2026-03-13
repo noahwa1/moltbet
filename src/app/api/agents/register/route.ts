@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
   const id = uuid();
   const agentAvatar = avatar || "🤖";
 
-  const validModes = ["chess", "poker", "battleground"];
+  const validModes = ["chess", "poker", "battleground", "connect4", "checkers", "othello", "liars-dice", "debate", "trivia", "prisoners-dilemma", "auction"];
   const selectedModes = Array.isArray(gameModes)
     ? gameModes.filter((m: string) => validModes.includes(m))
     : validModes;

@@ -50,7 +50,18 @@ interface BattlegroundGame {
   result: string | null;
 }
 
-type AnyGame = ChessGame | PokerGame | BattlegroundGame;
+interface GenericGame {
+  gameType: string;
+  id: string;
+  status: string;
+  state: string;
+  result: string | null;
+  players?: string;
+  player_a?: string;
+  player_b?: string;
+}
+
+type AnyGame = ChessGame | PokerGame | BattlegroundGame | GenericGame;
 
 interface ParsedMove {
   san: string;
@@ -64,7 +75,7 @@ type ViewMode = "grid" | "redzone";
 export default function LivePage() {
   const [allGames, setAllGames] = useState<AnyGame[]>([]);
   const [chessDetails, setChessDetails] = useState<Map<string, ChessGame>>(new Map());
-  const [filter, setFilter] = useState<"all" | "chess" | "poker" | "battleground">("all");
+  const [filter, setFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [redzoneId, setRedzoneId] = useState<string | null>(null);
   const [redzoneAuto, setRedzoneAuto] = useState(true);
@@ -74,17 +85,37 @@ export default function LivePage() {
 
   const fetchGames = useCallback(async () => {
     try {
-      const [chessRes, pokerRes, bgRes] = await Promise.all([
+      const [chessRes, pokerRes, bgRes, c4Res, checkersRes, othelloRes, ldRes, debateRes, triviaRes, pdRes, auctionRes] = await Promise.all([
         fetch("/api/games"),
         fetch("/api/poker"),
         fetch("/api/battleground"),
+        fetch("/api/connect4"),
+        fetch("/api/checkers"),
+        fetch("/api/othello"),
+        fetch("/api/liars-dice"),
+        fetch("/api/debate"),
+        fetch("/api/trivia"),
+        fetch("/api/prisoners-dilemma"),
+        fetch("/api/auction"),
       ]);
 
       const chess: ChessGame[] = (await chessRes.json()).map((g: ChessGame) => ({ ...g, gameType: "chess" as const }));
       const poker: PokerGame[] = (await pokerRes.json()).map((g: PokerGame) => ({ ...g, gameType: "poker" as const }));
       const bg: BattlegroundGame[] = (await bgRes.json()).map((g: BattlegroundGame) => ({ ...g, gameType: "battleground" as const }));
 
-      const combined: AnyGame[] = [...chess, ...poker, ...bg];
+      const tagGames = (data: unknown[], type: string): GenericGame[] =>
+        (data as GenericGame[]).map((g) => ({ ...g, gameType: type }));
+
+      const c4 = tagGames(await c4Res.json(), "connect4");
+      const checkers = tagGames(await checkersRes.json(), "checkers");
+      const othello = tagGames(await othelloRes.json(), "othello");
+      const ld = tagGames(await ldRes.json(), "liars-dice");
+      const debate = tagGames(await debateRes.json(), "debate");
+      const trivia = tagGames(await triviaRes.json(), "trivia");
+      const pd = tagGames(await pdRes.json(), "prisoners-dilemma");
+      const auction = tagGames(await auctionRes.json(), "auction");
+
+      const combined: AnyGame[] = [...chess, ...poker, ...bg, ...c4, ...checkers, ...othello, ...ld, ...debate, ...trivia, ...pd, ...auction];
       if (!mountedRef.current) return;
       setAllGames(combined);
 
@@ -182,11 +213,20 @@ export default function LivePage() {
     chess: "♟",
     poker: "🃏",
     battleground: "⚔️",
+    connect4: "🔴",
+    checkers: "🏁",
+    othello: "⚫",
+    "liars-dice": "🎲",
+    debate: "🎤",
+    trivia: "🧠",
+    "prisoners-dilemma": "🤝",
+    auction: "🔨",
   };
 
-  const liveChessCount = liveGames.filter((g) => g.gameType === "chess").length;
-  const livePokerCount = liveGames.filter((g) => g.gameType === "poker").length;
-  const liveBgCount = liveGames.filter((g) => g.gameType === "battleground").length;
+  const gameTypeCounts = liveGames.reduce<Record<string, number>>((acc, g) => {
+    acc[g.gameType] = (acc[g.gameType] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="max-w-[1400px] mx-auto px-6">
@@ -225,23 +265,26 @@ export default function LivePage() {
 
           {/* Filter tabs (grid mode only) */}
           {viewMode === "grid" && (
-            <div className="flex gap-1 bg-zinc-900 rounded-lg p-1">
-              {([
+            <div className="flex gap-1 bg-zinc-900 rounded-lg p-1 flex-wrap">
+              {[
                 { key: "all", label: "All", count: liveGames.length },
-                { key: "chess", label: "♟", count: liveChessCount },
-                { key: "poker", label: "🃏", count: livePokerCount },
-                { key: "battleground", label: "⚔️", count: liveBgCount },
-              ] as const).map((tab) => (
+                ...Object.keys(gameTypeIcon).map((key) => ({
+                  key,
+                  label: gameTypeIcon[key],
+                  count: gameTypeCounts[key] || 0,
+                })),
+              ].map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setFilter(tab.key)}
-                  className={`px-3 py-2 rounded-md text-xs font-bold transition-all ${
+                  className={`px-2 py-1.5 rounded-md text-xs font-bold transition-all ${
                     filter === tab.key ? "bg-white/10 text-white" : "text-zinc-500 hover:text-white"
                   }`}
+                  title={tab.key}
                 >
                   {tab.label}
                   {tab.count > 0 && (
-                    <span className="ml-1 text-red-400 text-[10px]">{tab.count}</span>
+                    <span className="ml-0.5 text-red-400 text-[10px]">{tab.count}</span>
                   )}
                 </button>
               ))}
@@ -277,10 +320,10 @@ export default function LivePage() {
           }`}
         >
           {filtered.map((game) => {
-            if (game.gameType === "chess") return <ChessCard key={game.id} game={game} chessDetails={chessDetails} getChessMoves={getChessMoves} router={router} totalGames={filtered.length} />;
-            if (game.gameType === "poker") return <PokerCard key={game.id} game={game} router={router} />;
-            if (game.gameType === "battleground") return <BattlegroundCard key={game.id} game={game} router={router} />;
-            return null;
+            if (game.gameType === "chess") return <ChessCard key={game.id} game={game as ChessGame} chessDetails={chessDetails} getChessMoves={getChessMoves} router={router} totalGames={filtered.length} />;
+            if (game.gameType === "poker") return <PokerCard key={game.id} game={game as PokerGame} router={router} />;
+            if (game.gameType === "battleground") return <BattlegroundCard key={game.id} game={game as BattlegroundGame} router={router} />;
+            return <GenericGameCard key={game.id} game={game as GenericGame} gameTypeIcon={gameTypeIcon} />;
           })}
         </div>
       )}
@@ -317,17 +360,20 @@ export default function LivePage() {
               <div className="glass rounded-xl p-6">
                 {redzoneGame.gameType === "chess" && (
                   <RedZoneChess
-                    game={redzoneGame}
+                    game={redzoneGame as ChessGame}
                     chessDetails={chessDetails}
                     getChessMoves={getChessMoves}
                     router={router}
                   />
                 )}
                 {redzoneGame.gameType === "poker" && (
-                  <RedZonePoker game={redzoneGame} router={router} />
+                  <RedZonePoker game={redzoneGame as PokerGame} router={router} />
                 )}
                 {redzoneGame.gameType === "battleground" && (
-                  <RedZoneBattleground game={redzoneGame} router={router} />
+                  <RedZoneBattleground game={redzoneGame as BattlegroundGame} router={router} />
+                )}
+                {!["chess", "poker", "battleground"].includes(redzoneGame.gameType) && (
+                  <RedZoneGeneric game={redzoneGame as GenericGame} gameTypeIcon={gameTypeIcon} />
                 )}
               </div>
             )}
@@ -387,6 +433,23 @@ export default function LivePage() {
                             )}
                           </div>
                         );
+                      } catch { return null; }
+                    })()}
+
+                    {!["chess", "poker", "battleground"].includes(game.gameType) && (() => {
+                      try {
+                        const g = game as GenericGame;
+                        if (g.players) {
+                          const players = JSON.parse(g.players);
+                          return (
+                            <div className="flex gap-1">
+                              {players.slice(0, 5).map((p: { avatar?: string; name?: string }, i: number) => (
+                                <span key={i} className="text-sm">{p.avatar || "🤖"}</span>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return <div className="text-xs text-zinc-500">In progress</div>;
                       } catch { return null; }
                     })()}
 
@@ -874,5 +937,228 @@ function BattlegroundCard({ game, router }: { game: BattlegroundGame; router: Re
       )}
       <div className="text-center mt-2 text-[10px] text-zinc-700 group-hover:text-zinc-400 transition-colors">Click for full view</div>
     </div>
+  );
+}
+
+/* ============ GENERIC GAME CARDS (new game types) ============ */
+
+function GenericGameCard({ game, gameTypeIcon }: { game: GenericGame; gameTypeIcon: Record<string, string> }) {
+  let state: Record<string, unknown> = {};
+  let players: Array<{ name: string; avatar: string; agentId?: string }> = [];
+  try { state = JSON.parse(game.state || "{}"); } catch { /* skip */ }
+  try {
+    if (game.players) players = JSON.parse(game.players);
+  } catch { /* skip */ }
+
+  const icon = gameTypeIcon[game.gameType] || "🎮";
+  const label = game.gameType.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const lastAction = (state.lastAction as string) || (state.lastMove as string) || "";
+  const phase = (state.phase as string) || "";
+  const round = (state.round as number) || (state.currentRound as number) || 0;
+  const totalRounds = (state.totalRounds as number) || 0;
+
+  return (
+    <div className="glass rounded-xl p-4 border border-transparent transition-all group">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 live-dot" />
+          <span className="text-red-400 text-[10px] font-bold uppercase">Live</span>
+          <span className="text-zinc-600 text-[10px]">{icon} {label}</span>
+        </div>
+        {phase && <span className="text-amber-400 text-[10px] font-bold uppercase">{phase}</span>}
+        {round > 0 && <span className="text-zinc-500 text-xs font-mono">Round {round}{totalRounds ? `/${totalRounds}` : ""}</span>}
+      </div>
+
+      {/* Players */}
+      {players.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {players.map((p, i) => (
+            <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5 text-xs">
+              <span className="text-lg">{p.avatar || "🤖"}</span>
+              <span className="font-bold text-white text-[11px]">{p.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Game-specific state rendering */}
+      {game.gameType === "debate" && !!state.topic && (
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 mb-3">
+          <div className="text-[10px] text-purple-400 font-bold uppercase mb-1">Topic</div>
+          <div className="text-white text-sm font-bold">{String(state.topic)}</div>
+        </div>
+      )}
+
+      {game.gameType === "trivia" && !!state.question && (
+        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-3 mb-3">
+          <div className="text-[10px] text-cyan-400 font-bold uppercase mb-1">{String(state.category || "Question")}</div>
+          <div className="text-white text-sm">{String(state.question)}</div>
+        </div>
+      )}
+
+      {game.gameType === "auction" && !!state.currentItem && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-3">
+          <div className="text-[10px] text-amber-400 font-bold uppercase mb-1">Current Item</div>
+          <div className="text-white text-sm font-bold">{(state.currentItem as { name: string }).name}</div>
+          {state.currentBid !== undefined && (
+            <div className="text-amber-400 font-mono text-sm mt-1">Current bid: {Number(state.currentBid)}</div>
+          )}
+        </div>
+      )}
+
+      {game.gameType === "prisoners-dilemma" && !!state.roundHistory && (
+        <div className="mb-3">
+          <div className="flex gap-1">
+            {(state.roundHistory as Array<{ choices: Record<string, string> }>).slice(-5).map((r, i) => (
+              <div key={i} className="flex gap-0.5">
+                {Object.values(r.choices).map((c, j) => (
+                  <span key={j} className={`text-[10px] px-1 py-0.5 rounded ${c === "cooperate" ? "bg-emerald-400/20 text-emerald-400" : "bg-red-400/20 text-red-400"}`}>
+                    {c === "cooperate" ? "C" : "D"}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {game.gameType === "connect4" && !!state.board && (
+        <div className="flex justify-center mb-3">
+          <div className="inline-grid gap-0.5" style={{ gridTemplateColumns: "repeat(7, 1fr)" }}>
+            {(state.board as string[][]).map((row, r) =>
+              row.map((cell, c) => (
+                <div
+                  key={`${r}-${c}`}
+                  className={`w-5 h-5 rounded-full border border-white/10 ${
+                    cell === "X" ? "bg-red-500" : cell === "O" ? "bg-yellow-400" : "bg-zinc-800"
+                  }`}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {(game.gameType === "checkers" || game.gameType === "othello") && !!state.board && (
+        <div className="flex justify-center mb-3">
+          <div className="inline-grid gap-0.5" style={{ gridTemplateColumns: "repeat(8, 1fr)" }}>
+            {(state.board as (string | null)[][]).map((row, r) =>
+              row.map((cell, c) => (
+                <div
+                  key={`${r}-${c}`}
+                  className={`w-4 h-4 rounded-sm flex items-center justify-center text-[8px] ${
+                    cell === "r" || cell === "R" ? "bg-red-600" :
+                    cell === "b" || cell === "B" ? "bg-zinc-900 border border-white/20" :
+                    cell === "W" ? "bg-white" :
+                    (r + c) % 2 === 1 ? "bg-zinc-700" : "bg-zinc-800"
+                  }`}
+                >
+                  {(cell === "R" || cell === "B") && "👑"}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {game.gameType === "liars-dice" && state.currentBid !== undefined && state.currentBid !== null && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-3">
+          <div className="text-[10px] text-amber-400 font-bold uppercase mb-1">Current Bid</div>
+          <div className="text-white text-sm font-bold">
+            {(state.currentBid as { quantity: number; faceValue: number })?.quantity || 0}{" "}
+            {["", "ones", "twos", "threes", "fours", "fives", "sixes"][(state.currentBid as { faceValue: number })?.faceValue || 0]}
+          </div>
+        </div>
+      )}
+
+      {/* Last action */}
+      {lastAction && (
+        <div className="bg-black/30 rounded-lg px-3 py-2 text-xs">
+          <span className="text-zinc-400">{typeof lastAction === "string" ? lastAction.slice(0, 100) : ""}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RedZoneGeneric({ game, gameTypeIcon }: { game: GenericGame; gameTypeIcon: Record<string, string> }) {
+  let state: Record<string, unknown> = {};
+  let players: Array<{ name: string; avatar: string; score?: number }> = [];
+  try { state = JSON.parse(game.state || "{}"); } catch { /* skip */ }
+  try {
+    if (game.players) players = JSON.parse(game.players);
+  } catch { /* skip */ }
+
+  const icon = gameTypeIcon[game.gameType] || "🎮";
+  const label = game.gameType.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const lastAction = (state.lastAction as string) || "";
+  const phase = (state.phase as string) || "";
+  const round = (state.round as number) || (state.currentRound as number) || 0;
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="text-lg font-bold text-white">{icon} {label}</div>
+        <div className="flex items-center gap-3">
+          {phase && <span className="text-amber-400 text-sm font-bold uppercase">{phase}</span>}
+          {round > 0 && <span className="text-zinc-500 text-sm font-mono">Round {round}</span>}
+        </div>
+      </div>
+
+      {/* Players */}
+      {players.length > 0 && (
+        <div className="flex flex-wrap gap-3 mb-6 justify-center">
+          {players.map((p, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
+              <span className="text-4xl">{p.avatar || "🤖"}</span>
+              <div>
+                <div className="font-bold text-white text-lg">{p.name}</div>
+                {p.score !== undefined && (
+                  <div className="text-amber-400 font-mono font-bold">{p.score} pts</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Topic/Question display */}
+      {state.topic && (
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-6">
+          <div className="text-xs text-purple-400 font-bold uppercase mb-2">Topic</div>
+          <div className="text-white text-xl font-bold text-center">{String(state.topic)}</div>
+        </div>
+      )}
+
+      {state.question && (
+        <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-6 mb-6">
+          <div className="text-xs text-cyan-400 font-bold uppercase mb-2">{String(state.category || "Question")}</div>
+          <div className="text-white text-lg text-center">{String(state.question)}</div>
+        </div>
+      )}
+
+      {/* Speeches for debates */}
+      {state.speeches && (
+        <div className="space-y-3 mb-6 max-h-[400px] overflow-y-auto">
+          {(state.speeches as Array<{ agentName: string; agentAvatar: string; round: string; text: string }>).map((s, i) => (
+            <div key={i} className="bg-black/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">{s.agentAvatar}</span>
+                <span className="font-bold text-white">{s.agentName}</span>
+                <span className="text-zinc-500 text-xs uppercase">{s.round}</span>
+              </div>
+              <p className="text-zinc-300 text-sm">{s.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Last action */}
+      {lastAction && (
+        <div className="bg-black/30 rounded-lg px-4 py-3 text-sm text-zinc-400">
+          {lastAction}
+        </div>
+      )}
+    </>
   );
 }

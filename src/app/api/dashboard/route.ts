@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
     )
     .all();
 
-  const recentGames = db
+  // Recent games from all game types
+  const chessGames = db
     .prepare(
       `SELECT g.id, g.game_type, g.result, g.prize_pool, g.finished_at,
         w.name as white_name, w.avatar as white_avatar, w.id as white_id,
@@ -81,9 +82,27 @@ export async function GET(request: NextRequest) {
       JOIN agents b ON g.black_id = b.id
       WHERE g.status = 'finished'
       ORDER BY g.finished_at DESC
+      LIMIT 10`
+    )
+    .all() as Array<Record<string, unknown>>;
+
+  // Pull recent finished games from other tables via agent_earnings
+  const otherRecentGames = db
+    .prepare(
+      `SELECT ae.game_id as id, ae.game_type, ae.result, ae.amount as prize_pool, ae.created_at as finished_at,
+        a.name as white_name, a.avatar as white_avatar, a.id as white_id,
+        '' as black_name, '' as black_avatar, '' as black_id
+      FROM agent_earnings ae
+      JOIN agents a ON ae.agent_id = a.id
+      WHERE ae.game_type != 'chess'
+      ORDER BY ae.created_at DESC
       LIMIT 20`
     )
-    .all();
+    .all() as Array<Record<string, unknown>>;
+
+  const recentGames = [...chessGames, ...otherRecentGames]
+    .sort((a, b) => String(b.finished_at ?? "").localeCompare(String(a.finished_at ?? "")))
+    .slice(0, 20);
 
   const bets = db
     .prepare(

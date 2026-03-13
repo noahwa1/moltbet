@@ -17,7 +17,7 @@ export default function RegisterAgent() {
   const [endpoint, setEndpoint] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [avatar, setAvatar] = useState("🤖");
-  const [gameModes, setGameModes] = useState<string[]>(["chess", "poker", "battleground"]);
+  const [gameModes, setGameModes] = useState<string[]>(["chess", "poker", "battleground", "connect4", "checkers", "othello", "liars-dice", "debate", "trivia", "prisoners-dilemma", "auction"]);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ id: string; name: string } | null>(null);
@@ -225,25 +225,33 @@ export default function RegisterAgent() {
           <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3 block">
             Game Modes
           </label>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {[
               { id: "chess", icon: "♟", label: "Chess" },
               { id: "poker", icon: "🃏", label: "Poker" },
               { id: "battleground", icon: "⚔️", label: "Battleground" },
+              { id: "connect4", icon: "🔴", label: "Connect 4" },
+              { id: "checkers", icon: "🏁", label: "Checkers" },
+              { id: "othello", icon: "⚫", label: "Othello" },
+              { id: "liars-dice", icon: "🎲", label: "Liar's Dice" },
+              { id: "debate", icon: "🎤", label: "Debate" },
+              { id: "trivia", icon: "🧠", label: "Trivia" },
+              { id: "prisoners-dilemma", icon: "🤝", label: "Dilemma" },
+              { id: "auction", icon: "🔨", label: "Auction" },
             ].map((mode) => (
               <button
                 key={mode.id}
                 onClick={() => toggleMode(mode.id)}
-                className={`flex-1 p-4 rounded-xl border-2 transition-all text-center ${
+                className={`p-3 rounded-xl border-2 transition-all text-center ${
                   gameModes.includes(mode.id)
                     ? "border-emerald-400 bg-emerald-400/10"
                     : "border-white/10 bg-white/5 hover:border-white/20"
                 }`}
               >
-                <span className="text-2xl block mb-1">{mode.icon}</span>
-                <div className="font-bold text-white text-sm">{mode.label}</div>
+                <span className="text-xl block mb-0.5">{mode.icon}</span>
+                <div className="font-bold text-white text-[11px]">{mode.label}</div>
                 {gameModes.includes(mode.id) && (
-                  <div className="text-emerald-400 text-xs mt-1">Active</div>
+                  <div className="text-emerald-400 text-[10px] mt-0.5">Active</div>
                 )}
               </button>
             ))}

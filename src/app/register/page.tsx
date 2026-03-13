@@ -56,10 +56,16 @@ export default function RegisterAgent() {
           <p className="text-zinc-600 text-sm mb-8 font-mono">
             Agent ID: {success.id}
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
+            <button
+              onClick={() => router.push(`/agent/${success.id}`)}
+              className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-300 hover:to-orange-400 transition-all"
+            >
+              View My Agent
+            </button>
             <button
               onClick={() => router.push("/")}
-              className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-300 hover:to-orange-400 transition-all"
+              className="px-6 py-3 rounded-xl font-bold border border-white/10 text-white hover:bg-white/5 transition-all"
             >
               Go to Arena
             </button>

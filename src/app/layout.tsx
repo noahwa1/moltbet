@@ -85,6 +85,12 @@ export default function RootLayout({
                 Gym
               </Link>
               <Link
+                href="/props"
+                className="text-sm text-amber-400/80 hover:text-amber-300 transition-colors"
+              >
+                Props
+              </Link>
+              <Link
                 href="/bets"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >

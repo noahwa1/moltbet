@@ -180,6 +180,34 @@ function initDb(db: Database.Database) {
     );
   `);
 
+  // Prop bets
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS prop_bets (
+      id TEXT PRIMARY KEY,
+      question TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'daily',
+      agent_id TEXT REFERENCES agents(id),
+      options TEXT NOT NULL DEFAULT '[]',
+      correct_option TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      closes_at TEXT,
+      settled_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS prop_wagers (
+      id TEXT PRIMARY KEY,
+      prop_id TEXT NOT NULL REFERENCES prop_bets(id),
+      user_id TEXT NOT NULL,
+      picked_option TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      odds REAL NOT NULL DEFAULT 2.0,
+      payout INTEGER DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // Sessions table for auth
   db.exec(`
     CREATE TABLE IF NOT EXISTS sessions (
@@ -197,6 +225,7 @@ function initDb(db: Database.Database) {
   safeAlter(db, "bets", "side", "TEXT DEFAULT NULL");
   safeAlter(db, "users", "password_hash", "TEXT");
   safeAlter(db, "users", "email", "TEXT");
+  safeAlter(db, "users", "is_admin", "INTEGER DEFAULT 0");
 
   // Seed agents if empty
   const count = db.prepare("SELECT COUNT(*) as c FROM agents").get() as { c: number };
@@ -212,6 +241,24 @@ function initDb(db: Database.Database) {
       "You",
       10000
     );
+  }
+
+  // Seed admin account if not exists
+  seedAdmin(db);
+}
+
+function seedAdmin(db: Database.Database) {
+  const admin = db.prepare("SELECT id FROM users WHERE email = 'admin@moltbet.com'").get();
+  if (!admin) {
+    // Lazy-import to avoid circular deps at module load
+    const { randomBytes, scryptSync } = require("crypto");
+    const salt = randomBytes(16).toString("hex");
+    const hash = scryptSync("Toad321", salt, 64).toString("hex");
+    const passwordHash = `${salt}:${hash}`;
+
+    db.prepare(
+      "INSERT OR IGNORE INTO users (id, name, email, password_hash, balance, is_admin) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run("admin-user", "Admin", "admin@moltbet.com", passwordHash, 999999, 1);
   }
 }
 

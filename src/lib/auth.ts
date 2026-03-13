@@ -29,7 +29,7 @@ export function createSession(userId: string): string {
 
 export function getCurrentUser(
   request?: NextRequest
-): { id: string; name: string; balance: number; email: string } | null {
+): { id: string; name: string; balance: number; email: string; is_admin: number } | null {
   let token: string | undefined;
 
   if (request) {
@@ -43,7 +43,7 @@ export function getCurrentUser(
 
 function getUserByToken(
   token: string
-): { id: string; name: string; balance: number; email: string } | null {
+): { id: string; name: string; balance: number; email: string; is_admin: number } | null {
   const db = getDb();
   const session = db
     .prepare(
@@ -60,9 +60,9 @@ function getUserByToken(
   }
 
   const user = db
-    .prepare("SELECT id, name, balance, email FROM users WHERE id = ?")
+    .prepare("SELECT id, name, balance, email, is_admin FROM users WHERE id = ?")
     .get(session.user_id) as
-    | { id: string; name: string; balance: number; email: string }
+    | { id: string; name: string; balance: number; email: string; is_admin: number }
     | undefined;
 
   return user || null;

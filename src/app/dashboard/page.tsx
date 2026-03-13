@@ -100,7 +100,7 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async () => {
     const res = await fetch("/api/dashboard");
-    setData(await res.json());
+    if (res.ok) setData(await res.json());
   }, []);
 
   useEffect(() => {

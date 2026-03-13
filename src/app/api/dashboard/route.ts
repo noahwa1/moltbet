@@ -4,10 +4,7 @@ import { getDb } from "@/lib/db";
 export async function GET(request: NextRequest) {
   const { getCurrentUser } = await import("@/lib/auth");
   const authUser = getCurrentUser(request);
-  if (!authUser) {
-    return NextResponse.json({ error: "Sign in to view portfolio" }, { status: 401 });
-  }
-  const userId = authUser.id;
+  const userId = authUser?.id ?? "default-user";
   const db = getDb();
 
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId) as Record<string, unknown>;

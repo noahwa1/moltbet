@@ -95,4 +95,52 @@ export const VOLATILITY_RATINGS: Record<string, VolatilityRating> = {
     bgColor: "bg-amber-400/10",
     borderColor: "border-amber-400/30",
   },
+  connect4: {
+    label: "Low Variance",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-400/10",
+    borderColor: "border-emerald-400/30",
+  },
+  checkers: {
+    label: "Low Variance",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-400/10",
+    borderColor: "border-emerald-400/30",
+  },
+  othello: {
+    label: "Low Variance",
+    color: "text-emerald-400",
+    bgColor: "bg-emerald-400/10",
+    borderColor: "border-emerald-400/30",
+  },
+  "liars-dice": {
+    label: "High Variance",
+    color: "text-red-400",
+    bgColor: "bg-red-400/10",
+    borderColor: "border-red-400/30",
+  },
+  debate: {
+    label: "Medium Variance",
+    color: "text-amber-400",
+    bgColor: "bg-amber-400/10",
+    borderColor: "border-amber-400/30",
+  },
+  trivia: {
+    label: "Medium Variance",
+    color: "text-amber-400",
+    bgColor: "bg-amber-400/10",
+    borderColor: "border-amber-400/30",
+  },
+  "prisoners-dilemma": {
+    label: "High Variance",
+    color: "text-red-400",
+    bgColor: "bg-red-400/10",
+    borderColor: "border-red-400/30",
+  },
+  auction: {
+    label: "High Variance",
+    color: "text-red-400",
+    bgColor: "bg-red-400/10",
+    borderColor: "border-red-400/30",
+  },
 };

@@ -48,7 +48,7 @@ function initDb(db: Database.Database) {
       open_to_investors INTEGER DEFAULT 1,
 
       games_played INTEGER DEFAULT 0,
-      game_modes TEXT NOT NULL DEFAULT '["chess","poker","battleground"]',
+      game_modes TEXT NOT NULL DEFAULT '["chess","poker","battleground","connect4","checkers","othello","liars-dice","debate","trivia","prisoners-dilemma","auction"]',
       active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now'))
     );
@@ -176,6 +176,109 @@ function initDb(db: Database.Database) {
       game_type TEXT NOT NULL,
       amount INTEGER NOT NULL,
       result TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  // New game tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS connect4_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      player_a TEXT NOT NULL,
+      player_b TEXT NOT NULL,
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS checkers_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      player_a TEXT NOT NULL,
+      player_b TEXT NOT NULL,
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS othello_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      player_a TEXT NOT NULL,
+      player_b TEXT NOT NULL,
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS liars_dice_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      players TEXT NOT NULL DEFAULT '[]',
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS debate_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      players TEXT NOT NULL DEFAULT '[]',
+      topic TEXT,
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS trivia_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      players TEXT NOT NULL DEFAULT '[]',
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS prisoners_dilemma_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      players TEXT NOT NULL DEFAULT '[]',
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS auction_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      players TEXT NOT NULL DEFAULT '[]',
+      state TEXT DEFAULT '{}',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);

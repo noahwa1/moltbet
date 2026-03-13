@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { authFetch } from "./AuthPrompt";
 import Link from "next/link";
 
@@ -120,14 +121,15 @@ export default function NavBalance() {
       </div>
 
       {/* Success toast */}
-      {success && (
+      {success && createPortal(
         <div className="fixed top-20 right-6 z-[60] bg-emerald-500 text-white px-5 py-3 rounded-lg shadow-xl animate-slideUp font-bold">
           {success}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Coin shop modal */}
-      {showShop && (
+      {showShop && createPortal(
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
           onClick={(e) => {
@@ -195,7 +197,8 @@ export default function NavBalance() {
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

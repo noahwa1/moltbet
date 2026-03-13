@@ -2,6 +2,14 @@ import { getDb } from "./db";
 import { createGame, playGame } from "./game-manager";
 import { playPokerGame } from "./games/poker";
 import { playBattlegroundGame } from "./games/battleground";
+import { playConnect4Game } from "./games/connect4";
+import { playCheckersGame } from "./games/checkers";
+import { playOthelloGame } from "./games/othello";
+import { playLiarsDiceGame } from "./games/liars-dice";
+import { playDebateGame } from "./games/debate";
+import { playTriviaGame } from "./games/trivia";
+import { playPrisonersDilemmaGame } from "./games/prisoners-dilemma";
+import { playAuctionGame } from "./games/auction";
 import { v4 as uuid } from "uuid";
 
 let running = false;
@@ -33,12 +41,33 @@ export function stopScheduler() {
 
 function tick() {
   try {
+    // Original games
     ensureChessGames();
     ensurePokerGames();
     ensureBattlegroundGames();
     startDueChessGames();
     startDuePokerGames();
     startDueBattlegroundGames();
+
+    // New 1v1 games
+    ensure1v1Games("connect4", "connect4_games", 2);
+    ensure1v1Games("checkers", "checkers_games", 2);
+    ensure1v1Games("othello", "othello_games", 2);
+    ensure1v1Games("prisoners-dilemma", "prisoners_dilemma_games", 2);
+    startDue1v1Games("connect4", "connect4_games", playConnect4Game);
+    startDue1v1Games("checkers", "checkers_games", playCheckersGame);
+    startDue1v1Games("othello", "othello_games", playOthelloGame);
+    startDue1v1Games("prisoners-dilemma", "prisoners_dilemma_games", playPrisonersDilemmaGame);
+
+    // New multiplayer games
+    ensureMultiplayerGames("liars-dice", "liars_dice_games", 3, 5, 1);
+    ensureMultiplayerGames("debate", "debate_games", 2, 2, 1);
+    ensureMultiplayerGames("trivia", "trivia_games", 3, 5, 1);
+    ensureMultiplayerGames("auction", "auction_games", 3, 5, 1);
+    startDueMultiplayerGames("liars-dice", "liars_dice_games", playLiarsDiceGame);
+    startDueMultiplayerGames("debate", "debate_games", playDebateGame);
+    startDueMultiplayerGames("trivia", "trivia_games", playTriviaGame);
+    startDueMultiplayerGames("auction", "auction_games", playAuctionGame);
   } catch (e) {
     console.error("[Scheduler] Error:", e);
   }
@@ -53,7 +82,7 @@ function getActiveAgents(gameMode?: string) {
       const modes = JSON.parse(a.game_modes) as string[];
       return modes.includes(gameMode);
     } catch {
-      return true; // Default: all games
+      return true;
     }
   });
 }
@@ -65,6 +94,140 @@ function pickRandom<T>(arr: T[], n: number): T[] {
 
 function formatDate(d: Date): string {
   return d.toISOString().replace("T", " ").replace("Z", "").split(".")[0];
+}
+
+// ─── Generic 1v1 Game Scheduling ──────────────────────────────────────────────
+
+function ensure1v1Games(gameMode: string, table: string, queueSize: number) {
+  const db = getDb();
+  const pending = (db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE status = 'pending'`).get() as { c: number }).c;
+  const live = (db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE status = 'live'`).get() as { c: number }).c;
+
+  if (live >= 1 || pending >= queueSize) return;
+
+  const agents = getActiveAgents(gameMode);
+  if (agents.length < 2) return;
+
+  const needed = queueSize - pending;
+  let nextTime = new Date();
+  nextTime.setMinutes(nextTime.getMinutes() + 1);
+
+  for (let i = 0; i < needed; i++) {
+    const pair = pickRandom(agents.map(a => a.id), 2);
+    const id = uuid();
+    const scheduledAt = formatDate(new Date(nextTime));
+
+    db.prepare(
+      `INSERT INTO ${table} (id, status, player_a, player_b, scheduled_at) VALUES (?, 'pending', ?, ?, ?)`
+    ).run(id, pair[0], pair[1], scheduledAt);
+
+    console.log(`[Scheduler] ${gameMode}: ${pair[0]} vs ${pair[1]} at ${scheduledAt}`);
+    nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES);
+  }
+}
+
+function startDue1v1Games(
+  gameMode: string,
+  table: string,
+  playFn: (playerIds: string[]) => Promise<unknown>
+) {
+  const db = getDb();
+  const now = formatDate(new Date());
+  const liveCount = (db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE status = 'live'`).get() as { c: number }).c;
+  if (liveCount >= 1) return;
+
+  const dueGames = db.prepare(
+    `SELECT id, player_a, player_b FROM ${table} WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 1`
+  ).all(now) as { id: string; player_a: string; player_b: string }[];
+
+  if (dueGames.length > 0) {
+    const game = dueGames[0];
+    console.log(`[Scheduler] Starting ${gameMode} game ${game.id}`);
+
+    db.prepare(`UPDATE ${table} SET status = 'live', started_at = datetime('now') WHERE id = ?`).run(game.id);
+
+    playFn([game.player_a, game.player_b]).then(() => {
+      db.prepare(`UPDATE ${table} SET status = 'finished', finished_at = datetime('now') WHERE id = ?`).run(game.id);
+    }).catch(e => {
+      console.error(`[Scheduler] ${gameMode} error:`, e);
+      db.prepare(`UPDATE ${table} SET status = 'finished' WHERE id = ?`).run(game.id);
+    });
+  }
+}
+
+// ─── Generic Multiplayer Game Scheduling ──────────────────────────────────────
+
+function ensureMultiplayerGames(
+  gameMode: string,
+  table: string,
+  minPlayers: number,
+  maxPlayers: number,
+  queueSize: number
+) {
+  const db = getDb();
+  const pending = (db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE status = 'pending'`).get() as { c: number }).c;
+  const live = (db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE status = 'live'`).get() as { c: number }).c;
+
+  if (live >= 1 || pending >= queueSize) return;
+
+  const agents = getActiveAgents(gameMode);
+  if (agents.length < minPlayers) return;
+
+  const needed = queueSize - pending;
+  let nextTime = new Date();
+  nextTime.setMinutes(nextTime.getMinutes() + 2);
+
+  for (let i = 0; i < needed; i++) {
+    const playerCount = Math.min(agents.length, minPlayers + Math.floor(Math.random() * (maxPlayers - minPlayers + 1)));
+    const players = pickRandom(agents.map(a => a.id), playerCount);
+
+    const id = uuid();
+    const scheduledAt = formatDate(new Date(nextTime));
+
+    const playerInfos = players.map(pid => {
+      const agent = db.prepare("SELECT id, name, avatar FROM agents WHERE id = ?").get(pid) as { id: string; name: string; avatar: string };
+      return { agentId: agent.id, name: agent.name, avatar: agent.avatar };
+    });
+
+    db.prepare(
+      `INSERT INTO ${table} (id, status, players, scheduled_at) VALUES (?, 'pending', ?, ?)`
+    ).run(id, JSON.stringify(playerInfos), scheduledAt);
+
+    console.log(`[Scheduler] ${gameMode}: ${players.length} players at ${scheduledAt}`);
+    nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES);
+  }
+}
+
+function startDueMultiplayerGames(
+  gameMode: string,
+  table: string,
+  playFn: (playerIds: string[]) => Promise<unknown>
+) {
+  const db = getDb();
+  const now = formatDate(new Date());
+  const liveCount = (db.prepare(`SELECT COUNT(*) as c FROM ${table} WHERE status = 'live'`).get() as { c: number }).c;
+  if (liveCount >= 1) return;
+
+  const dueGames = db.prepare(
+    `SELECT id, players FROM ${table} WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 1`
+  ).all(now) as { id: string; players: string }[];
+
+  if (dueGames.length > 0) {
+    const game = dueGames[0];
+    const players = JSON.parse(game.players) as { agentId: string }[];
+    const agentIds = players.map(p => p.agentId);
+
+    console.log(`[Scheduler] Starting ${gameMode} game ${game.id}`);
+
+    db.prepare(`UPDATE ${table} SET status = 'live', started_at = datetime('now') WHERE id = ?`).run(game.id);
+
+    playFn(agentIds).then(() => {
+      db.prepare(`UPDATE ${table} SET status = 'finished', finished_at = datetime('now') WHERE id = ?`).run(game.id);
+    }).catch(e => {
+      console.error(`[Scheduler] ${gameMode} error:`, e);
+      db.prepare(`UPDATE ${table} SET status = 'finished' WHERE id = ?`).run(game.id);
+    });
+  }
 }
 
 // ─── Chess Scheduling ────────────────────────────────────────────────────────
@@ -94,7 +257,7 @@ function ensureChessGames() {
   for (let i = 0; i < needed; i++) {
     const pair = pickRandom(agents.map(a => a.id), 2);
     const scheduledAt = new Date(nextTime);
-    const gameId = createGame(pair[0], pair[1], scheduledAt);
+    createGame(pair[0], pair[1], scheduledAt);
     console.log(`[Scheduler] Chess: ${pair[0]} vs ${pair[1]} at ${scheduledAt.toISOString()}`);
     nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES);
   }
@@ -141,14 +304,12 @@ function ensurePokerGames() {
   nextTime.setMinutes(nextTime.getMinutes() + 1);
 
   for (let i = 0; i < needed; i++) {
-    // Pick 3-5 random agents for poker
     const playerCount = Math.min(agents.length, 3 + Math.floor(Math.random() * 3));
     const players = pickRandom(agents.map(a => a.id), playerCount);
 
     const id = uuid();
     const scheduledAt = formatDate(new Date(nextTime));
 
-    // Fetch agent info for the players list
     const playerInfos = players.map(pid => {
       const agent = db.prepare("SELECT id, name, avatar FROM agents WHERE id = ?").get(pid) as { id: string; name: string; avatar: string };
       return { agentId: agent.id, name: agent.name, avatar: agent.avatar };
@@ -180,11 +341,9 @@ function startDuePokerGames() {
 
     console.log(`[Scheduler] Starting poker game ${game.id}`);
 
-    // Mark as live
     db.prepare("UPDATE poker_games SET status = 'live', started_at = datetime('now') WHERE id = ?").run(game.id);
 
     playPokerGame(agentIds).then(state => {
-      // Update the poker game record with final state
       db.prepare(
         "UPDATE poker_games SET status = 'finished', state = ?, result = ?, finished_at = datetime('now') WHERE id = ?"
       ).run(
@@ -218,15 +377,14 @@ function ensureBattlegroundGames() {
   if (live >= 1 || pending >= BATTLEGROUND_QUEUE_SIZE) return;
 
   const agents = getActiveAgents("battleground");
-  if (agents.length < 4) return; // Need at least 2 per team
+  if (agents.length < 4) return;
 
   const needed = BATTLEGROUND_QUEUE_SIZE - pending;
 
   let nextTime = new Date();
-  nextTime.setMinutes(nextTime.getMinutes() + 3); // Battleground starts a bit later
+  nextTime.setMinutes(nextTime.getMinutes() + 3);
 
   for (let i = 0; i < needed; i++) {
-    // Pick 4-6 agents and split into 2 teams
     const teamSize = Math.min(Math.floor(agents.length / 2), 2 + Math.floor(Math.random() * 2));
     const selected = pickRandom(agents.map(a => a.id), teamSize * 2);
     const teamAIds = selected.slice(0, teamSize);

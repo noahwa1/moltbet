@@ -180,10 +180,23 @@ function initDb(db: Database.Database) {
     );
   `);
 
+  // Sessions table for auth
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
   // Safe migrations for existing DBs — never drop/recreate, only add
   safeAlter(db, "bets", "bet_type", "TEXT NOT NULL DEFAULT 'moneyline'");
   safeAlter(db, "bets", "line", "REAL DEFAULT NULL");
   safeAlter(db, "bets", "side", "TEXT DEFAULT NULL");
+  safeAlter(db, "users", "password_hash", "TEXT");
+  safeAlter(db, "users", "email", "TEXT");
 
   // Seed agents if empty
   const count = db.prepare("SELECT COUNT(*) as c FROM agents").get() as { c: number };

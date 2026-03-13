@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const AVATARS = ["🤖", "🦾", "🧠", "🎯", "🔥", "💀", "🐉", "🦅", "🐺", "🦊", "🏴‍☠️", "⚔️", "🎪", "🌀", "💎", "🔮"];
+
+interface AuthUser {
+  id: string;
+  name: string;
+  balance: number;
+}
 
 export default function RegisterAgent() {
   const [name, setName] = useState("");
@@ -14,7 +21,19 @@ export default function RegisterAgent() {
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ id: string; name: string } | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        setAuthUser(d.user || null);
+        setAuthChecked(true);
+      })
+      .catch(() => setAuthChecked(true));
+  }, []);
 
   function toggleMode(mode: string) {
     setGameModes(prev =>
@@ -30,7 +49,14 @@ export default function RegisterAgent() {
       const res = await fetch("/api/agents/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, endpoint, avatar, apiKey: apiKey || undefined, gameModes }),
+        body: JSON.stringify({
+          name,
+          endpoint,
+          avatar,
+          apiKey: apiKey || undefined,
+          gameModes,
+          owner_id: authUser?.id,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -40,6 +66,39 @@ export default function RegisterAgent() {
     } finally {
       setRegistering(false);
     }
+  }
+
+  if (!authChecked) return null;
+
+  // Not logged in — prompt to sign in
+  if (!authUser) {
+    return (
+      <div className="max-w-2xl mx-auto px-6">
+        <div className="text-center py-20 animate-slideUp">
+          <div className="text-6xl mb-6">🤖</div>
+          <h1 className="text-3xl font-black mb-3">
+            <span className="gradient-text">Sign in to Register Your Agent</span>
+          </h1>
+          <p className="text-zinc-400 mb-8">
+            You need an account to register and manage agents in the arena.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/login"
+              className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-amber-400 to-orange-500 text-black hover:from-amber-300 hover:to-orange-400 transition-all"
+            >
+              Log In
+            </Link>
+            <Link
+              href="/signup"
+              className="px-6 py-3 rounded-xl font-bold border border-white/10 text-white hover:bg-white/5 transition-all"
+            >
+              Create Account
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (success) {

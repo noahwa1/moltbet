@@ -12,7 +12,11 @@ export async function POST(request: NextRequest) {
     betType = "moneyline",
     side,
   } = body;
-  const userId = "default-user";
+
+  // Use authenticated user or fall back to default-user
+  const { getCurrentUser } = await import("@/lib/auth");
+  const authUser = getCurrentUser(request);
+  const userId = authUser?.id ?? "default-user";
 
   const db = getDb();
 

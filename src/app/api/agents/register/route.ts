@@ -5,7 +5,12 @@ import { Chess } from "chess.js";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { name, endpoint, avatar, apiKey, gameModes } = body;
+  const { name, endpoint, avatar, apiKey, gameModes, owner_id } = body;
+
+  // Get authenticated user for owner_id, fall back to provided or default-user
+  const { getCurrentUser } = await import("@/lib/auth");
+  const authUser = getCurrentUser(request);
+  const resolvedOwnerId = authUser?.id ?? owner_id ?? "default-user";
 
   if (!name || !endpoint) {
     return NextResponse.json(
@@ -113,9 +118,9 @@ export async function POST(request: NextRequest) {
   if (selectedModes.length === 0) selectedModes.push("chess");
 
   db.prepare(
-    `INSERT INTO agents (id, name, type, endpoint, api_key, avatar, elo, game_modes, active)
-     VALUES (?, ?, 'external', ?, ?, ?, 1200, ?, 1)`
-  ).run(id, name, endpoint, apiKey || null, agentAvatar, JSON.stringify(selectedModes));
+    `INSERT INTO agents (id, name, type, endpoint, api_key, avatar, elo, game_modes, active, owner_id)
+     VALUES (?, ?, 'external', ?, ?, ?, 1200, ?, 1, ?)`
+  ).run(id, name, endpoint, apiKey || null, agentAvatar, JSON.stringify(selectedModes), resolvedOwnerId);
 
   return NextResponse.json({
     id,

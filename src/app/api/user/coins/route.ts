@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const { amount } = await req.json();
@@ -8,12 +9,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
-  const db = getDb();
-  db.prepare("UPDATE users SET balance = balance + ? WHERE id = 'default-user'").run(
-    amount
-  );
+  const authUser = getCurrentUser(req);
+  const userId = authUser?.id ?? "default-user";
 
-  const user = db.prepare("SELECT balance FROM users WHERE id = 'default-user'").get() as {
+  const db = getDb();
+  db.prepare("UPDATE users SET balance = balance + ? WHERE id = ?").run(amount, userId);
+
+  const user = db.prepare("SELECT balance FROM users WHERE id = ?").get(userId) as {
     balance: number;
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 const COIN_PACKAGES = [
   { amount: 5000, price: "$4.99", label: "5K", popular: false },
@@ -10,23 +11,47 @@ const COIN_PACKAGES = [
   { amount: 100000, price: "$59.99", label: "100K", popular: false },
 ];
 
+interface AuthUser {
+  id: string;
+  name: string;
+  balance: number;
+  email: string;
+}
+
 export default function NavBalance() {
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [balance, setBalance] = useState(10000);
   const [showShop, setShowShop] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    function updateBalance() {
-      fetch("/api/user")
+    function updateUser() {
+      fetch("/api/auth/me")
         .then((r) => r.json())
         .then((d) => {
-          if (d.user) setBalance(d.user.balance);
+          if (d.user) {
+            setUser(d.user);
+            setBalance(d.user.balance);
+          } else {
+            setUser(null);
+            // Fall back to default-user balance
+            fetch("/api/user")
+              .then((r) => r.json())
+              .then((d) => {
+                if (d.user) setBalance(d.user.balance);
+              })
+              .catch(() => {});
+          }
+          setLoaded(true);
         })
-        .catch(() => {});
+        .catch(() => {
+          setLoaded(true);
+        });
     }
-    updateBalance();
-    const interval = setInterval(updateBalance, 5000);
+    updateUser();
+    const interval = setInterval(updateUser, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -50,14 +75,53 @@ export default function NavBalance() {
     }
   }
 
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+    window.location.href = "/";
+  }
+
+  if (!loaded) return null;
+
+  // Not logged in — show sign in button
+  if (!user) {
+    return (
+      <Link
+        href="/login"
+        className="bg-gradient-to-r from-amber-400 to-orange-500 text-black rounded-full px-4 py-1.5 text-sm font-bold hover:from-amber-300 hover:to-orange-400 transition-all"
+      >
+        Sign In
+      </Link>
+    );
+  }
+
   return (
     <>
-      <button
-        onClick={() => setShowShop(true)}
-        className="bg-amber-400/10 border border-amber-400/30 rounded-full px-4 py-1.5 text-amber-400 text-sm font-mono font-bold hover:bg-amber-400/20 hover:border-amber-400/50 transition-all cursor-pointer"
-      >
-        {balance.toLocaleString()} coins
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setShowShop(true)}
+          className="bg-amber-400/10 border border-amber-400/30 rounded-full px-4 py-1.5 text-amber-400 text-sm font-mono font-bold hover:bg-amber-400/20 hover:border-amber-400/50 transition-all cursor-pointer"
+        >
+          {balance.toLocaleString()} coins
+        </button>
+
+        <div className="relative group">
+          <button className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 text-sm text-zinc-300 hover:bg-white/10 transition-all cursor-pointer">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-[10px] font-black text-black">
+              {user.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="max-w-[80px] truncate">{user.name}</span>
+          </button>
+          <div className="absolute right-0 top-full mt-2 w-40 bg-zinc-900 border border-white/10 rounded-xl overflow-hidden shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <button
+              onClick={handleLogout}
+              className="w-full px-4 py-3 text-left text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Success toast */}
       {success && (

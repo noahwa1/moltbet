@@ -6,7 +6,14 @@ export async function GET(request: NextRequest) {
   const db = getDb();
 
   const authUser = getCurrentUser(request);
-  const userId = authUser?.id ?? "default-user";
+  if (!authUser) {
+    return NextResponse.json({
+      user: { balance: 0, total_won: 0, total_lost: 0 },
+      bets: [],
+      loggedIn: false,
+    });
+  }
+  const userId = authUser.id;
 
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
 

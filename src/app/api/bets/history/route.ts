@@ -4,7 +4,13 @@ import { getDb } from "@/lib/db";
 export async function GET(request: NextRequest) {
   const { getCurrentUser } = await import("@/lib/auth");
   const authUser = getCurrentUser(request);
-  const userId = authUser?.id ?? "default-user";
+  if (!authUser) {
+    return NextResponse.json({
+      bets: [],
+      stats: { totalWagered: 0, totalWon: 0, netPnl: 0, winRate: "0.0", roi: "0.0", totalBets: 0, pendingBets: 0, wonBets: 0, lostBets: 0 },
+    });
+  }
+  const userId = authUser.id;
   const db = getDb();
 
   const statusFilter = request.nextUrl.searchParams.get("status");

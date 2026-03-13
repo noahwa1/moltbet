@@ -6,7 +6,10 @@ export async function GET(request: NextRequest) {
   const db = getDb();
 
   const authUser = getCurrentUser(request);
-  const userId = authUser?.id ?? "default-user";
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to view your account" }, { status: 401 });
+  }
+  const userId = authUser.id;
 
   const user = db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
 

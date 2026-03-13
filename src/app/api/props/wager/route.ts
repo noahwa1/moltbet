@@ -5,7 +5,10 @@ import { placePropWager } from "@/lib/props";
 export async function POST(req: NextRequest) {
   try {
     const authUser = getCurrentUser(req);
-    const userId = authUser?.id ?? "default-user";
+    if (!authUser) {
+      return NextResponse.json({ error: "Sign in to place prop wagers" }, { status: 401 });
+    }
+    const userId = authUser.id;
 
     const { propId, pickedOption, amount } = await req.json();
 

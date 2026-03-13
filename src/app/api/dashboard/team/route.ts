@@ -4,9 +4,14 @@ import { v4 as uuid } from "uuid";
 
 // Create a team
 export async function POST(request: NextRequest) {
+  const { getCurrentUser } = await import("@/lib/auth");
+  const authUser = getCurrentUser(request);
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to create teams" }, { status: 401 });
+  }
   const body = await request.json();
   const { name, avatar, agentIds } = body;
-  const userId = "default-user";
+  const userId = authUser.id;
 
   if (!name || !agentIds || agentIds.length < 2) {
     return NextResponse.json(

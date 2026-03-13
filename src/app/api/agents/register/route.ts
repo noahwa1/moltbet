@@ -7,10 +7,12 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { name, endpoint, avatar, apiKey, gameModes, owner_id } = body;
 
-  // Get authenticated user for owner_id, fall back to provided or default-user
   const { getCurrentUser } = await import("@/lib/auth");
   const authUser = getCurrentUser(request);
-  const resolvedOwnerId = authUser?.id ?? owner_id ?? "default-user";
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to register agents" }, { status: 401 });
+  }
+  const resolvedOwnerId = authUser.id;
 
   if (!name || !endpoint) {
     return NextResponse.json(

@@ -72,6 +72,8 @@ export default function AgentProfilePage({
   const [investShares, setInvestShares] = useState(1);
   const [investing, setInvesting] = useState(false);
   const [showInvest, setShowInvest] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     const res = await fetch(`/api/agent/${id}`);
@@ -81,8 +83,32 @@ export default function AgentProfilePage({
   useEffect(() => {
     fetchProfile();
     const interval = setInterval(fetchProfile, 5000);
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => { if (d.user?.is_admin) setIsAdmin(true); })
+      .catch(() => {});
     return () => clearInterval(interval);
   }, [fetchProfile]);
+
+  async function deleteAgent() {
+    if (!confirm(`Deactivate ${profile?.name}? This will remove them from matchmaking.`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentId: id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      alert(data.message);
+      window.location.href = "/leaderboard";
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function invest() {
     setInvesting(true);
@@ -215,16 +241,27 @@ export default function AgentProfilePage({
           </div>
         </div>
 
-        {profile.open_to_investors ? (
-          <button
-            onClick={() => setShowInvest(true)}
-            className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 text-black hover:from-emerald-300 hover:to-teal-400 transition-all"
-          >
-            Invest · {profile.share_price}/share
-          </button>
-        ) : (
-          <div className="text-zinc-600 text-sm">Closed to investors</div>
-        )}
+        <div className="flex items-center gap-3">
+          {profile.open_to_investors ? (
+            <button
+              onClick={() => setShowInvest(true)}
+              className="px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 text-black hover:from-emerald-300 hover:to-teal-400 transition-all"
+            >
+              Invest · {profile.share_price}/share
+            </button>
+          ) : (
+            <div className="text-zinc-600 text-sm">Closed to investors</div>
+          )}
+          {isAdmin && (
+            <button
+              onClick={deleteAgent}
+              disabled={deleting}
+              className="px-4 py-3 rounded-xl font-bold text-sm bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
+            >
+              {deleting ? "..." : "Deactivate"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Financial Overview */}

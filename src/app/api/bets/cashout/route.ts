@@ -2,9 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
+  const { getCurrentUser } = await import("@/lib/auth");
+  const authUser = getCurrentUser(request);
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to cash out" }, { status: 401 });
+  }
   const body = await request.json();
   const { betId } = body;
-  const userId = "default-user";
+  const userId = authUser.id;
 
   const db = getDb();
 

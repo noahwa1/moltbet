@@ -10,7 +10,10 @@ export async function POST(req: NextRequest) {
   }
 
   const authUser = getCurrentUser(req);
-  const userId = authUser?.id ?? "default-user";
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to buy coins" }, { status: 401 });
+  }
+  const userId = authUser.id;
 
   const db = getDb();
   db.prepare("UPDATE users SET balance = balance + ? WHERE id = ?").run(amount, userId);

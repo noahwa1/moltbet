@@ -36,13 +36,6 @@ export default function NavBalance() {
             setBalance(d.user.balance);
           } else {
             setUser(null);
-            // Fall back to default-user balance
-            fetch("/api/user")
-              .then((r) => r.json())
-              .then((d) => {
-                if (d.user) setBalance(d.user.balance);
-              })
-              .catch(() => {});
           }
           setLoaded(true);
         })

@@ -3,9 +3,14 @@ import { getDb } from "@/lib/db";
 import { v4 as uuid } from "uuid";
 
 export async function POST(request: NextRequest) {
+  const { getCurrentUser } = await import("@/lib/auth");
+  const authUser = getCurrentUser(request);
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to invest" }, { status: 401 });
+  }
   const body = await request.json();
   const { agentId, shares } = body;
-  const userId = "default-user";
+  const userId = authUser.id;
 
   if (!agentId || !shares || shares < 1) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });

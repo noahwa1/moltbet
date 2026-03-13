@@ -13,10 +13,12 @@ export async function POST(request: NextRequest) {
     side,
   } = body;
 
-  // Use authenticated user or fall back to default-user
   const { getCurrentUser } = await import("@/lib/auth");
   const authUser = getCurrentUser(request);
-  const userId = authUser?.id ?? "default-user";
+  if (!authUser) {
+    return NextResponse.json({ error: "Sign in to place bets" }, { status: 401 });
+  }
+  const userId = authUser.id;
 
   const db = getDb();
 

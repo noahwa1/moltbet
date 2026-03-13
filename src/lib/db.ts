@@ -27,12 +27,23 @@ function initDb(db: Database.Database) {
       api_key TEXT DEFAULT NULL,
       avatar TEXT NOT NULL,
       elo INTEGER DEFAULT 1200,
+      peak_elo INTEGER DEFAULT 1200,
       wins INTEGER DEFAULT 0,
       losses INTEGER DEFAULT 0,
       draws INTEGER DEFAULT 0,
       owner_id TEXT DEFAULT NULL,
       team_id TEXT DEFAULT NULL,
-      earnings INTEGER DEFAULT 0,
+
+      -- Financial
+      career_earnings INTEGER DEFAULT 0,
+      career_losses INTEGER DEFAULT 0,
+      total_prize_pool INTEGER DEFAULT 0,
+      total_dividends_paid INTEGER DEFAULT 0,
+      total_shares_issued INTEGER DEFAULT 100,
+      share_price INTEGER DEFAULT 100,
+      management_fee_pct INTEGER DEFAULT 20,
+      open_to_investors INTEGER DEFAULT 1,
+
       games_played INTEGER DEFAULT 0,
       game_modes TEXT NOT NULL DEFAULT '["chess","poker","battleground"]',
       active INTEGER DEFAULT 1,
@@ -53,6 +64,7 @@ function initDb(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS games (
       id TEXT PRIMARY KEY,
       game_type TEXT NOT NULL DEFAULT 'chess',
+      prize_pool INTEGER DEFAULT 500,
       white_id TEXT NOT NULL REFERENCES agents(id),
       black_id TEXT NOT NULL REFERENCES agents(id),
       status TEXT NOT NULL DEFAULT 'pending',
@@ -99,6 +111,7 @@ function initDb(db: Database.Database) {
       balance INTEGER DEFAULT 10000,
       total_won INTEGER DEFAULT 0,
       total_lost INTEGER DEFAULT 0,
+      total_dividends INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -121,10 +134,33 @@ function initDb(db: Database.Database) {
       user_id TEXT NOT NULL,
       agent_id TEXT NOT NULL REFERENCES agents(id),
       shares INTEGER NOT NULL DEFAULT 1,
-      bought_at_elo INTEGER NOT NULL,
+      bought_at_price INTEGER NOT NULL,
       invested INTEGER NOT NULL,
+      dividends_received INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       UNIQUE(user_id, agent_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS dividends (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL REFERENCES agents(id),
+      game_id TEXT NOT NULL,
+      game_type TEXT NOT NULL,
+      total_prize INTEGER NOT NULL,
+      owner_cut INTEGER NOT NULL,
+      investor_pool INTEGER NOT NULL,
+      per_share_payout REAL NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS dividend_payouts (
+      id TEXT PRIMARY KEY,
+      dividend_id TEXT NOT NULL REFERENCES dividends(id),
+      user_id TEXT NOT NULL,
+      agent_id TEXT NOT NULL,
+      shares INTEGER NOT NULL,
+      amount INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS agent_earnings (
@@ -220,9 +256,9 @@ function seedAgents(db: Database.Database) {
   ];
 
   const stmt = db.prepare(
-    "INSERT INTO agents (id, name, type, model, personality, avatar, elo) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO agents (id, name, type, model, personality, avatar, elo, peak_elo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   );
   for (const a of agents) {
-    stmt.run(a.id, a.name, a.type, a.model, a.personality, a.avatar, a.elo);
+    stmt.run(a.id, a.name, a.type, a.model, a.personality, a.avatar, a.elo, a.elo);
   }
 }

@@ -13,18 +13,38 @@ export async function POST(request: NextRequest) {
 
   const db = getDb();
 
-  const agent = db.prepare("SELECT * FROM agents WHERE id = ?").get(agentId) as {
+  const agent = db.prepare(
+    "SELECT id, name, share_price, total_shares_issued, open_to_investors FROM agents WHERE id = ?"
+  ).get(agentId) as {
     id: string;
-    elo: number;
     name: string;
+    share_price: number;
+    total_shares_issued: number;
+    open_to_investors: number;
   } | undefined;
 
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
-  // Cost = shares * ELO rating (so better agents cost more)
-  const costPerShare = agent.elo;
+  if (!agent.open_to_investors) {
+    return NextResponse.json({ error: "This agent is not open to investors" }, { status: 400 });
+  }
+
+  // Check available float
+  const held = db.prepare(
+    "SELECT COALESCE(SUM(shares), 0) as total FROM portfolio WHERE agent_id = ?"
+  ).get(agentId) as { total: number };
+
+  const available = agent.total_shares_issued - held.total;
+  if (shares > available) {
+    return NextResponse.json(
+      { error: `Only ${available} shares available (${held.total}/${agent.total_shares_issued} held)` },
+      { status: 400 }
+    );
+  }
+
+  const costPerShare = agent.share_price;
   const totalCost = costPerShare * shares;
 
   const user = db.prepare("SELECT balance FROM users WHERE id = ?").get(userId) as {
@@ -49,8 +69,8 @@ export async function POST(request: NextRequest) {
     ).run(shares, totalCost, userId, agentId);
   } else {
     db.prepare(
-      "INSERT INTO portfolio (id, user_id, agent_id, shares, bought_at_elo, invested) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(uuid(), userId, agentId, shares, agent.elo, totalCost);
+      "INSERT INTO portfolio (id, user_id, agent_id, shares, bought_at_price, invested) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(uuid(), userId, agentId, shares, costPerShare, totalCost);
   }
 
   // Deduct balance

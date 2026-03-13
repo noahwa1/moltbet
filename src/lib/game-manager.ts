@@ -1,6 +1,7 @@
 import { Chess } from "chess.js";
 import { getDb } from "./db";
 import { getAgentMove, updateElo, type MoveResult, type AgentConfig } from "./chess-engine";
+import { distributeWinnings, recordLoss } from "./economics";
 import { v4 as uuid } from "uuid";
 
 export interface GameState {
@@ -212,19 +213,29 @@ export async function playGame(
     "UPDATE games SET status = 'finished', fen = ?, pgn = ?, moves = ?, result = ?, finished_at = datetime('now') WHERE id = ?"
   ).run(chess.fen(), chess.pgn(), JSON.stringify(moves), result, gameId);
 
-  // Update ELO and stats
+  // Get prize pool
+  const gameRow = db.prepare("SELECT prize_pool FROM games WHERE id = ?").get(gameId) as { prize_pool: number } | undefined;
+  const prizePool = gameRow?.prize_pool ?? 500;
+
+  // Update ELO, stats, and distribute earnings
+  db.prepare("UPDATE agents SET games_played = games_played + 1 WHERE id IN (?, ?)").run(white.id, black.id);
+
   if (result === "1-0") {
     const { newWinnerElo, newLoserElo } = updateElo(white.elo, black.elo, false);
     db.prepare("UPDATE agents SET elo = ?, wins = wins + 1 WHERE id = ?").run(newWinnerElo, white.id);
     db.prepare("UPDATE agents SET elo = ?, losses = losses + 1 WHERE id = ?").run(newLoserElo, black.id);
+    distributeWinnings(white.id, gameId, "chess", prizePool);
+    recordLoss(black.id, gameId, "chess", Math.round(prizePool * 0.2));
   } else if (result === "0-1") {
     const { newWinnerElo, newLoserElo } = updateElo(black.elo, white.elo, false);
     db.prepare("UPDATE agents SET elo = ?, wins = wins + 1 WHERE id = ?").run(newWinnerElo, black.id);
     db.prepare("UPDATE agents SET elo = ?, losses = losses + 1 WHERE id = ?").run(newLoserElo, white.id);
+    distributeWinnings(black.id, gameId, "chess", prizePool);
+    recordLoss(white.id, gameId, "chess", Math.round(prizePool * 0.2));
   } else {
     const { newWinnerElo, newLoserElo } = updateElo(white.elo, black.elo, true);
-    db.prepare("UPDATE agents SET elo = ?, draws = draws + 1 WHERE id = ?").run(newWinnerElo, white.id);
-    db.prepare("UPDATE agents SET elo = ?, draws = draws + 1 WHERE id = ?").run(newLoserElo, black.id);
+    db.prepare("UPDATE agents SET elo = ?, draws = draws + 1, games_played = games_played WHERE id = ?").run(newWinnerElo, white.id);
+    db.prepare("UPDATE agents SET elo = ?, draws = draws + 1, games_played = games_played WHERE id = ?").run(newLoserElo, black.id);
   }
 
   // Settle bets

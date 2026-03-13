@@ -126,10 +126,10 @@ export default function Leaderboard() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
+                    <a href={`/agent/${agent.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                       <span className="text-2xl">{agent.avatar}</span>
-                      <span className="font-bold text-white">{agent.name}</span>
-                    </div>
+                      <span className="font-bold text-white hover:text-amber-400 transition-colors">{agent.name}</span>
+                    </a>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className="font-mono font-bold text-amber-400 text-lg">

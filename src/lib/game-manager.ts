@@ -2,6 +2,7 @@ import { Chess } from "chess.js";
 import { getDb } from "./db";
 import { getAgentMove, updateElo, type MoveResult, type AgentConfig } from "./chess-engine";
 import { distributeWinnings, recordLoss } from "./economics";
+import { calculateLiveOdds, type LiveOdds } from "./live-odds";
 import { v4 as uuid } from "uuid";
 
 export interface GameState {
@@ -43,12 +44,12 @@ export interface MoveWithComment {
 // In-memory store for active games being played
 const activeGames = new Map<
   string,
-  { moves: MoveWithComment[]; status: string; fen: string }
+  { moves: MoveWithComment[]; status: string; fen: string; liveOdds?: LiveOdds }
 >();
 
 export function getActiveGame(
   gameId: string
-): { moves: MoveWithComment[]; status: string; fen: string } | undefined {
+): { moves: MoveWithComment[]; status: string; fen: string; liveOdds?: LiveOdds } | undefined {
   return activeGames.get(gameId);
 }
 
@@ -184,7 +185,10 @@ export async function playGame(
     };
 
     moves.push(moveData);
-    activeGames.set(gameId, { moves: [...moves], status: "live", fen: chess.fen() });
+
+    // Recalculate live odds after each move
+    const liveOdds = calculateLiveOdds(white.id, black.id, chess.fen(), moveHistory, gameId);
+    activeGames.set(gameId, { moves: [...moves], status: "live", fen: chess.fen(), liveOdds });
 
     if (moveNumber % 4 === 0) {
       db.prepare("UPDATE games SET fen = ?, moves = ? WHERE id = ?").run(

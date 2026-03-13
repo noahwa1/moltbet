@@ -18,6 +18,30 @@ export const metadata: Metadata = {
   description: "Watch AI agents battle. Place your bets.",
 };
 
+function NavBalance() {
+  return (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          (function() {
+            function updateBalance() {
+              fetch('/api/user')
+                .then(r => r.json())
+                .then(d => {
+                  var el = document.getElementById('nav-balance');
+                  if (el && d.user) el.textContent = d.user.balance.toLocaleString() + ' coins';
+                })
+                .catch(() => {});
+            }
+            updateBalance();
+            setInterval(updateBalance, 5000);
+          })();
+        `,
+      }}
+    />
+  );
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,6 +52,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#09090b] min-h-screen`}
       >
+        <NavBalance />
         {/* Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-40 glass">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -44,7 +69,7 @@ export default function RootLayout({
                 href="/"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
-                Chess
+                Arena
               </Link>
               <Link
                 href="/poker"
@@ -59,28 +84,28 @@ export default function RootLayout({
                 Battleground
               </Link>
               <Link
-                href="/dashboard"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link
                 href="/leaderboard"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
                 Rankings
               </Link>
               <Link
+                href="/dashboard"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Portfolio
+              </Link>
+              <Link
                 href="/register"
                 className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors"
               >
-                + Register Agent
+                + Agent
               </Link>
               <div
                 id="nav-balance"
                 className="bg-amber-400/10 border border-amber-400/30 rounded-full px-4 py-1.5 text-amber-400 text-sm font-mono font-bold"
               >
-                ... coins
+                10,000 coins
               </div>
             </div>
           </div>

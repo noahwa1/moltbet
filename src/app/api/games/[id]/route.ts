@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getActiveGame } from "@/lib/game-manager";
+import { getOddsHistory } from "@/lib/live-odds";
 
 export async function GET(
   _request: NextRequest,
@@ -27,14 +28,22 @@ export async function GET(
 
   // If game is live, get real-time moves from memory
   const activeGame = getActiveGame(id);
+  const oddsHistory = getOddsHistory(id);
+
   if (activeGame) {
     return NextResponse.json({
       ...game,
       moves: JSON.stringify(activeGame.moves),
       fen: activeGame.fen,
       status: activeGame.status,
+      liveOdds: activeGame.liveOdds ?? null,
+      oddsHistory,
     });
   }
 
-  return NextResponse.json(game);
+  return NextResponse.json({
+    ...game,
+    liveOdds: null,
+    oddsHistory,
+  });
 }

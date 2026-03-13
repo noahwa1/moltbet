@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { calculateOdds } from "@/lib/chess-engine";
+import { getOddsHistory } from "@/lib/live-odds";
+import { getActiveGame } from "@/lib/game-manager";
 import { startScheduler } from "@/lib/scheduler";
 
 let schedulerStarted = false;
@@ -32,11 +34,18 @@ export async function GET() {
     )
     .all() as Array<Record<string, unknown>>;
 
-  // Attach odds to each game
-  const gamesWithOdds = games.map((g) => ({
-    ...g,
-    odds: calculateOdds(g.white_elo as number, g.black_elo as number),
-  }));
+  // Attach odds to each game (live odds if available, otherwise static ELO-based)
+  const gamesWithOdds = games.map((g) => {
+    const activeGame = getActiveGame(g.id as string);
+    const liveOdds = activeGame?.liveOdds;
+    return {
+      ...g,
+      odds: liveOdds
+        ? { white: liveOdds.white, black: liveOdds.black, draw: liveOdds.draw }
+        : calculateOdds(g.white_elo as number, g.black_elo as number),
+      liveOdds: liveOdds ?? null,
+    };
+  });
 
   return NextResponse.json(gamesWithOdds);
 }

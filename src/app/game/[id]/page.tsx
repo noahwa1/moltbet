@@ -5,6 +5,7 @@ import ChessBoard from "@/components/ChessBoard";
 import BettingPanel from "@/components/BettingPanel";
 import MoveLog from "@/components/MoveLog";
 import GameResult from "@/components/GameResult";
+import OddsSparkline from "@/components/OddsSparkline";
 
 interface GameData {
   id: string;
@@ -22,6 +23,23 @@ interface GameData {
   fen: string;
   moves: string;
   result: string | null;
+  liveOdds: {
+    white: number;
+    black: number;
+    draw: number;
+    whiteWinProb: number;
+    blackWinProb: number;
+    drawProb: number;
+    evaluation: number;
+    momentum: "white" | "black" | "neutral";
+  } | null;
+  oddsHistory: Array<{
+    moveNumber: number;
+    white: number;
+    black: number;
+    evaluation: number;
+    timestamp: number;
+  }>;
 }
 
 interface Move {
@@ -93,7 +111,9 @@ export default function GamePage({
   }
 
   const currentTurn = game.fen.split(" ")[1] === "w" ? "white" : "black";
-  const odds = calculateDisplayOdds(game.white_elo, game.black_elo);
+  const odds = game.liveOdds
+    ? { white: game.liveOdds.white, black: game.liveOdds.black, draw: game.liveOdds.draw }
+    : calculateDisplayOdds(game.white_elo, game.black_elo);
 
   return (
     <div className="max-w-7xl mx-auto px-6">
@@ -200,6 +220,45 @@ export default function GamePage({
             onBetPlaced={fetchBalance}
             disabled={game.status === "finished"}
           />
+
+          {/* Momentum indicator */}
+          {game.liveOdds && (
+            <div className="glass rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Momentum</span>
+                <span className={`text-xs font-bold ${
+                  game.liveOdds.momentum === "white" ? "text-emerald-400" :
+                  game.liveOdds.momentum === "black" ? "text-red-400" : "text-zinc-400"
+                }`}>
+                  {game.liveOdds.momentum === "white" ? "White Surging" :
+                   game.liveOdds.momentum === "black" ? "Black Surging" : "Even"}
+                </span>
+              </div>
+              {/* Win probability bar */}
+              <div className="flex h-2 rounded-full overflow-hidden bg-zinc-800">
+                <div
+                  className="bg-emerald-500 transition-all duration-500"
+                  style={{ width: `${game.liveOdds.whiteWinProb * 100}%` }}
+                />
+                <div
+                  className="bg-zinc-600 transition-all duration-500"
+                  style={{ width: `${game.liveOdds.drawProb * 100}%` }}
+                />
+                <div
+                  className="bg-red-500 transition-all duration-500"
+                  style={{ width: `${game.liveOdds.blackWinProb * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] mt-1">
+                <span className="text-emerald-400 font-mono">{(game.liveOdds.whiteWinProb * 100).toFixed(0)}%</span>
+                <span className="text-zinc-500 font-mono">{(game.liveOdds.drawProb * 100).toFixed(0)}%</span>
+                <span className="text-red-400 font-mono">{(game.liveOdds.blackWinProb * 100).toFixed(0)}%</span>
+              </div>
+            </div>
+          )}
+
+          {/* Odds sparkline */}
+          <OddsSparkline history={game.oddsHistory ?? []} width={320} height={120} />
 
           {/* Move count / game stats */}
           <div className="glass rounded-xl p-4">

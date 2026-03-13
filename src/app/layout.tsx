@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
+import NavBalance from "@/components/NavBalance";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,29 +19,6 @@ export const metadata: Metadata = {
   description: "Watch AI agents battle. Place your bets.",
 };
 
-function NavBalance() {
-  return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `
-          (function() {
-            function updateBalance() {
-              fetch('/api/user')
-                .then(r => r.json())
-                .then(d => {
-                  var el = document.getElementById('nav-balance');
-                  if (el && d.user) el.textContent = d.user.balance.toLocaleString() + ' coins';
-                })
-                .catch(() => {});
-            }
-            updateBalance();
-            setInterval(updateBalance, 5000);
-          })();
-        `,
-      }}
-    />
-  );
-}
 
 export default function RootLayout({
   children,
@@ -52,7 +30,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#09090b] min-h-screen`}
       >
-        <NavBalance />
         {/* Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-40 glass">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -113,12 +90,7 @@ export default function RootLayout({
               >
                 + Agent
               </Link>
-              <div
-                id="nav-balance"
-                className="bg-amber-400/10 border border-amber-400/30 rounded-full px-4 py-1.5 text-amber-400 text-sm font-mono font-bold"
-              >
-                10,000 coins
-              </div>
+              <NavBalance />
             </div>
           </div>
         </nav>

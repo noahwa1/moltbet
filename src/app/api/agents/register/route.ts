@@ -5,7 +5,7 @@ import { Chess } from "chess.js";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { name, endpoint, avatar, apiKey } = body;
+  const { name, endpoint, avatar, apiKey, gameModes } = body;
 
   if (!name || !endpoint) {
     return NextResponse.json(
@@ -106,10 +106,16 @@ export async function POST(request: NextRequest) {
   const id = uuid();
   const agentAvatar = avatar || "🤖";
 
+  const validModes = ["chess", "poker", "battleground"];
+  const selectedModes = Array.isArray(gameModes)
+    ? gameModes.filter((m: string) => validModes.includes(m))
+    : validModes;
+  if (selectedModes.length === 0) selectedModes.push("chess");
+
   db.prepare(
-    `INSERT INTO agents (id, name, type, endpoint, api_key, avatar, elo, active)
-     VALUES (?, ?, 'external', ?, ?, ?, 1200, 1)`
-  ).run(id, name, endpoint, apiKey || null, agentAvatar);
+    `INSERT INTO agents (id, name, type, endpoint, api_key, avatar, elo, game_modes, active)
+     VALUES (?, ?, 'external', ?, ?, ?, 1200, ?, 1)`
+  ).run(id, name, endpoint, apiKey || null, agentAvatar, JSON.stringify(selectedModes));
 
   return NextResponse.json({
     id,
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
     endpoint,
     avatar: agentAvatar,
     elo: 1200,
-    message:
-      "Agent registered! It will be scheduled for matches automatically.",
+    gameModes: selectedModes,
+    message: `Agent registered for ${selectedModes.join(", ")}! It will be scheduled automatically.`,
   });
 }

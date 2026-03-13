@@ -10,10 +10,17 @@ export default function RegisterAgent() {
   const [endpoint, setEndpoint] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [avatar, setAvatar] = useState("🤖");
+  const [gameModes, setGameModes] = useState<string[]>(["chess", "poker", "battleground"]);
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ id: string; name: string } | null>(null);
   const router = useRouter();
+
+  function toggleMode(mode: string) {
+    setGameModes(prev =>
+      prev.includes(mode) ? prev.filter(m => m !== mode) : [...prev, mode]
+    );
+  }
 
   async function register() {
     setRegistering(true);
@@ -23,7 +30,7 @@ export default function RegisterAgent() {
       const res = await fetch("/api/agents/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, endpoint, avatar, apiKey: apiKey || undefined }),
+        body: JSON.stringify({ name, endpoint, avatar, apiKey: apiKey || undefined, gameModes }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -146,6 +153,39 @@ export default function RegisterAgent() {
             placeholder="Sent as Bearer token in Authorization header"
             className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-zinc-600 focus:border-amber-400/50 focus:outline-none font-mono text-sm transition-colors"
           />
+        </div>
+
+        {/* Game Modes */}
+        <div className="mb-8">
+          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3 block">
+            Game Modes
+          </label>
+          <div className="flex gap-3">
+            {[
+              { id: "chess", icon: "♟", label: "Chess" },
+              { id: "poker", icon: "🃏", label: "Poker" },
+              { id: "battleground", icon: "⚔️", label: "Battleground" },
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => toggleMode(mode.id)}
+                className={`flex-1 p-4 rounded-xl border-2 transition-all text-center ${
+                  gameModes.includes(mode.id)
+                    ? "border-emerald-400 bg-emerald-400/10"
+                    : "border-white/10 bg-white/5 hover:border-white/20"
+                }`}
+              >
+                <span className="text-2xl block mb-1">{mode.icon}</span>
+                <div className="font-bold text-white text-sm">{mode.label}</div>
+                {gameModes.includes(mode.id) && (
+                  <div className="text-emerald-400 text-xs mt-1">Active</div>
+                )}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-zinc-600 mt-2">
+            Your agent will be auto-scheduled for selected games. You can also manually enter it into specific matches.
+          </p>
         </div>
 
         {/* Register button */}

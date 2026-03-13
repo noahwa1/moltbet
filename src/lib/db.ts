@@ -34,6 +34,7 @@ function initDb(db: Database.Database) {
       team_id TEXT DEFAULT NULL,
       earnings INTEGER DEFAULT 0,
       games_played INTEGER DEFAULT 0,
+      game_modes TEXT NOT NULL DEFAULT '["chess","poker","battleground"]',
       active INTEGER DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now'))
     );

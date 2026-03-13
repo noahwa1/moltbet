@@ -1,15 +1,18 @@
 import { getDb } from "./db";
 import { createGame, playGame } from "./game-manager";
+import { playPokerGame } from "./games/poker";
+import { playBattlegroundGame } from "./games/battleground";
+import { v4 as uuid } from "uuid";
 
 let running = false;
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
-// How far ahead we schedule (in minutes)
-const SCHEDULE_AHEAD_MINUTES = 15;
-// Minimum gap between games (in minutes)
+// Minimum gap between games of each type (in minutes)
 const MIN_GAP_MINUTES = 2;
-// How many upcoming games to keep in the queue
-const TARGET_QUEUE_SIZE = 4;
+// How many upcoming games to keep in each queue
+const CHESS_QUEUE_SIZE = 3;
+const POKER_QUEUE_SIZE = 2;
+const BATTLEGROUND_QUEUE_SIZE = 1;
 
 export function startScheduler() {
   if (running) return;
@@ -30,98 +33,259 @@ export function stopScheduler() {
 
 function tick() {
   try {
-    ensureUpcomingGames();
-    startDueGames();
+    ensureChessGames();
+    ensurePokerGames();
+    ensureBattlegroundGames();
+    startDueChessGames();
+    startDuePokerGames();
+    startDueBattlegroundGames();
   } catch (e) {
     console.error("[Scheduler] Error:", e);
   }
 }
 
-function ensureUpcomingGames() {
+function getActiveAgents(gameMode?: string) {
   const db = getDb();
+  const all = db.prepare("SELECT id, game_modes FROM agents WHERE active = 1").all() as { id: string; game_modes: string }[];
+  if (!gameMode) return all;
+  return all.filter(a => {
+    try {
+      const modes = JSON.parse(a.game_modes) as string[];
+      return modes.includes(gameMode);
+    } catch {
+      return true; // Default: all games
+    }
+  });
+}
 
-  // Count pending games
-  const pending = db
-    .prepare("SELECT COUNT(*) as c FROM games WHERE status = 'pending'")
-    .get() as { c: number };
+function pickRandom<T>(arr: T[], n: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+}
 
-  const live = db
-    .prepare("SELECT COUNT(*) as c FROM games WHERE status = 'live'")
-    .get() as { c: number };
+function formatDate(d: Date): string {
+  return d.toISOString().replace("T", " ").replace("Z", "").split(".")[0];
+}
 
-  const needed = TARGET_QUEUE_SIZE - pending.c;
+// ─── Chess Scheduling ────────────────────────────────────────────────────────
 
-  // Don't schedule more if there's already a live game (keep it focused)
-  if (live.c >= 2) return;
+function ensureChessGames() {
+  const db = getDb();
+  const pending = (db.prepare("SELECT COUNT(*) as c FROM games WHERE status = 'pending'").get() as { c: number }).c;
+  const live = (db.prepare("SELECT COUNT(*) as c FROM games WHERE status = 'live'").get() as { c: number }).c;
 
-  if (needed <= 0) return;
+  if (live >= 2 || pending >= CHESS_QUEUE_SIZE) return;
 
-  const agents = db.prepare("SELECT id FROM agents").all() as { id: string }[];
+  const agents = getActiveAgents("chess");
   if (agents.length < 2) return;
 
-  // Get the last scheduled game time
-  const lastGame = db
-    .prepare(
-      "SELECT scheduled_at FROM games WHERE status = 'pending' ORDER BY scheduled_at DESC LIMIT 1"
-    )
-    .get() as { scheduled_at: string } | undefined;
+  const needed = CHESS_QUEUE_SIZE - pending;
 
-  let nextTime: Date;
+  const lastGame = db.prepare(
+    "SELECT scheduled_at FROM games WHERE status = 'pending' ORDER BY scheduled_at DESC LIMIT 1"
+  ).get() as { scheduled_at: string } | undefined;
+
+  let nextTime = new Date();
   if (lastGame) {
     nextTime = new Date(lastGame.scheduled_at + "Z");
-    nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES);
-  } else {
-    // First game starts 30 seconds from now
-    nextTime = new Date();
-    nextTime.setSeconds(nextTime.getSeconds() + 30);
   }
+  nextTime.setSeconds(nextTime.getSeconds() + 30);
 
   for (let i = 0; i < needed; i++) {
-    // Pick two random different agents, weighted by avoiding recent matchups
-    const pair = pickMatchup(agents.map((a) => a.id));
-
+    const pair = pickRandom(agents.map(a => a.id), 2);
     const scheduledAt = new Date(nextTime);
     const gameId = createGame(pair[0], pair[1], scheduledAt);
-
-    console.log(
-      `[Scheduler] Scheduled game ${gameId}: ${pair[0]} vs ${pair[1]} at ${scheduledAt.toISOString()}`
-    );
-
+    console.log(`[Scheduler] Chess: ${pair[0]} vs ${pair[1]} at ${scheduledAt.toISOString()}`);
     nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES);
   }
 }
 
-function pickMatchup(agentIds: string[]): [string, string] {
-  // Shuffle and pick first two
-  const shuffled = [...agentIds].sort(() => Math.random() - 0.5);
-  return [shuffled[0], shuffled[1]];
-}
-
-function startDueGames() {
+function startDueChessGames() {
   const db = getDb();
-  const now = new Date().toISOString().replace("T", " ").replace("Z", "");
-
-  // Find games that are due to start
-  const dueGames = db
-    .prepare(
-      "SELECT id FROM games WHERE status = 'pending' AND scheduled_at <= ?"
-    )
-    .all(now) as { id: string }[];
-
-  // Only start one game at a time to keep things watchable
-  const liveCount = (
-    db
-      .prepare("SELECT COUNT(*) as c FROM games WHERE status = 'live'")
-      .get() as { c: number }
-  ).c;
-
+  const now = formatDate(new Date());
+  const liveCount = (db.prepare("SELECT COUNT(*) as c FROM games WHERE status = 'live'").get() as { c: number }).c;
   if (liveCount >= 1) return;
 
+  const dueGames = db.prepare(
+    "SELECT id FROM games WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 1"
+  ).all(now) as { id: string }[];
+
   if (dueGames.length > 0) {
-    const gameId = dueGames[0].id;
-    console.log(`[Scheduler] Starting game ${gameId}`);
-    playGame(gameId).catch((e) =>
-      console.error(`[Scheduler] Game ${gameId} error:`, e)
-    );
+    console.log(`[Scheduler] Starting chess game ${dueGames[0].id}`);
+    playGame(dueGames[0].id).catch(e => console.error(`[Scheduler] Chess error:`, e));
+  }
+}
+
+// ─── Poker Scheduling ────────────────────────────────────────────────────────
+
+function ensurePokerGames() {
+  const db = getDb();
+  const pending = (db.prepare("SELECT COUNT(*) as c FROM poker_games WHERE status = 'pending'").get() as { c: number }).c;
+  const live = (db.prepare("SELECT COUNT(*) as c FROM poker_games WHERE status = 'live'").get() as { c: number }).c;
+
+  if (live >= 1 || pending >= POKER_QUEUE_SIZE) return;
+
+  const agents = getActiveAgents("poker");
+  if (agents.length < 3) return;
+
+  const needed = POKER_QUEUE_SIZE - pending;
+
+  const lastGame = db.prepare(
+    "SELECT scheduled_at FROM poker_games WHERE status = 'pending' ORDER BY scheduled_at DESC LIMIT 1"
+  ).get() as { scheduled_at: string } | undefined;
+
+  let nextTime = new Date();
+  if (lastGame) {
+    nextTime = new Date(lastGame.scheduled_at + "Z");
+  }
+  nextTime.setMinutes(nextTime.getMinutes() + 1);
+
+  for (let i = 0; i < needed; i++) {
+    // Pick 3-5 random agents for poker
+    const playerCount = Math.min(agents.length, 3 + Math.floor(Math.random() * 3));
+    const players = pickRandom(agents.map(a => a.id), playerCount);
+
+    const id = uuid();
+    const scheduledAt = formatDate(new Date(nextTime));
+
+    // Fetch agent info for the players list
+    const playerInfos = players.map(pid => {
+      const agent = db.prepare("SELECT id, name, avatar FROM agents WHERE id = ?").get(pid) as { id: string; name: string; avatar: string };
+      return { agentId: agent.id, name: agent.name, avatar: agent.avatar };
+    });
+
+    db.prepare(
+      "INSERT INTO poker_games (id, status, players, scheduled_at) VALUES (?, 'pending', ?, ?)"
+    ).run(id, JSON.stringify(playerInfos), scheduledAt);
+
+    console.log(`[Scheduler] Poker: ${players.length} players at ${scheduledAt}`);
+    nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES);
+  }
+}
+
+function startDuePokerGames() {
+  const db = getDb();
+  const now = formatDate(new Date());
+  const liveCount = (db.prepare("SELECT COUNT(*) as c FROM poker_games WHERE status = 'live'").get() as { c: number }).c;
+  if (liveCount >= 1) return;
+
+  const dueGames = db.prepare(
+    "SELECT id, players FROM poker_games WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 1"
+  ).all(now) as { id: string; players: string }[];
+
+  if (dueGames.length > 0) {
+    const game = dueGames[0];
+    const players = JSON.parse(game.players) as { agentId: string }[];
+    const agentIds = players.map(p => p.agentId);
+
+    console.log(`[Scheduler] Starting poker game ${game.id}`);
+
+    // Mark as live
+    db.prepare("UPDATE poker_games SET status = 'live', started_at = datetime('now') WHERE id = ?").run(game.id);
+
+    playPokerGame(agentIds).then(state => {
+      // Update the poker game record with final state
+      db.prepare(
+        "UPDATE poker_games SET status = 'finished', state = ?, result = ?, finished_at = datetime('now') WHERE id = ?"
+      ).run(
+        JSON.stringify({
+          pot: state.pot,
+          phase: state.phase,
+          communityCards: state.communityCards,
+          players: state.players.map(p => ({ ...p, holeCards: p.holeCards })),
+        }),
+        JSON.stringify({
+          winner: state.players.find(p => !p.folded && p.chips > 0)?.agentId,
+          winnerName: state.players.find(p => !p.folded && p.chips > 0)?.name,
+          pot: state.pot,
+        }),
+        game.id
+      );
+    }).catch(e => {
+      console.error(`[Scheduler] Poker error:`, e);
+      db.prepare("UPDATE poker_games SET status = 'finished' WHERE id = ?").run(game.id);
+    });
+  }
+}
+
+// ─── Battleground Scheduling ─────────────────────────────────────────────────
+
+function ensureBattlegroundGames() {
+  const db = getDb();
+  const pending = (db.prepare("SELECT COUNT(*) as c FROM battleground_games WHERE status = 'pending'").get() as { c: number }).c;
+  const live = (db.prepare("SELECT COUNT(*) as c FROM battleground_games WHERE status = 'live'").get() as { c: number }).c;
+
+  if (live >= 1 || pending >= BATTLEGROUND_QUEUE_SIZE) return;
+
+  const agents = getActiveAgents("battleground");
+  if (agents.length < 4) return; // Need at least 2 per team
+
+  const needed = BATTLEGROUND_QUEUE_SIZE - pending;
+
+  let nextTime = new Date();
+  nextTime.setMinutes(nextTime.getMinutes() + 3); // Battleground starts a bit later
+
+  for (let i = 0; i < needed; i++) {
+    // Pick 4-6 agents and split into 2 teams
+    const teamSize = Math.min(Math.floor(agents.length / 2), 2 + Math.floor(Math.random() * 2));
+    const selected = pickRandom(agents.map(a => a.id), teamSize * 2);
+    const teamAIds = selected.slice(0, teamSize);
+    const teamBIds = selected.slice(teamSize);
+
+    const id = uuid();
+    const scheduledAt = formatDate(new Date(nextTime));
+
+    const teamAInfos = teamAIds.map(aid => {
+      const a = db.prepare("SELECT id, name, avatar FROM agents WHERE id = ?").get(aid) as { id: string; name: string; avatar: string };
+      return a;
+    });
+    const teamBInfos = teamBIds.map(aid => {
+      const a = db.prepare("SELECT id, name, avatar FROM agents WHERE id = ?").get(aid) as { id: string; name: string; avatar: string };
+      return a;
+    });
+
+    db.prepare(
+      "INSERT INTO battleground_games (id, status, team_a, team_b, scheduled_at) VALUES (?, 'pending', ?, ?, ?)"
+    ).run(id, JSON.stringify(teamAInfos), JSON.stringify(teamBInfos), scheduledAt);
+
+    console.log(`[Scheduler] Battleground: ${teamSize}v${teamSize} at ${scheduledAt}`);
+    nextTime.setMinutes(nextTime.getMinutes() + MIN_GAP_MINUTES + 3);
+  }
+}
+
+function startDueBattlegroundGames() {
+  const db = getDb();
+  const now = formatDate(new Date());
+  const liveCount = (db.prepare("SELECT COUNT(*) as c FROM battleground_games WHERE status = 'live'").get() as { c: number }).c;
+  if (liveCount >= 1) return;
+
+  const dueGames = db.prepare(
+    "SELECT id, team_a, team_b FROM battleground_games WHERE status = 'pending' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 1"
+  ).all(now) as { id: string; team_a: string; team_b: string }[];
+
+  if (dueGames.length > 0) {
+    const game = dueGames[0];
+    const teamA = JSON.parse(game.team_a) as { id: string }[];
+    const teamB = JSON.parse(game.team_b) as { id: string }[];
+
+    console.log(`[Scheduler] Starting battleground game ${game.id}`);
+
+    db.prepare("UPDATE battleground_games SET status = 'live', started_at = datetime('now') WHERE id = ?").run(game.id);
+
+    playBattlegroundGame(
+      teamA.map(a => a.id),
+      teamB.map(a => a.id)
+    ).then(result => {
+      db.prepare(
+        "UPDATE battleground_games SET status = 'finished', state = ?, result = ?, finished_at = datetime('now') WHERE id = ?"
+      ).run(
+        JSON.stringify(result.state),
+        JSON.stringify(result.result),
+        game.id
+      );
+    }).catch(e => {
+      console.error(`[Scheduler] Battleground error:`, e);
+      db.prepare("UPDATE battleground_games SET status = 'finished' WHERE id = ?").run(game.id);
+    });
   }
 }

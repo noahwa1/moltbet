@@ -42,71 +42,26 @@ export default function RootLayout({
                 Beta
               </div>
             </Link>
-            <div className="flex items-center gap-6">
-              <Link
-                href="/"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
+            <div className="flex items-center gap-5">
+              <Link href="/" className="text-sm text-zinc-400 hover:text-white transition-colors">
                 Arena
               </Link>
-              <Link
-                href="/live"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
+              <Link href="/live" className="text-sm text-zinc-400 hover:text-white transition-colors">
                 Live
               </Link>
-              <Link
-                href="/poker"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Poker
-              </Link>
-              <Link
-                href="/battleground"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Battleground
-              </Link>
-              <Link
-                href="/leaderboard"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Rankings
-              </Link>
-              <Link
-                href="/my-agents"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                War Room
-              </Link>
-              <Link
-                href="/dashboard"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Portfolio
-              </Link>
-              <Link
-                href="/gym"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Gym
-              </Link>
-              <Link
-                href="/props"
-                className="text-sm text-amber-400/80 hover:text-amber-300 transition-colors"
-              >
+              <Link href="/props" className="text-sm text-amber-400/80 hover:text-amber-300 transition-colors">
                 Props
               </Link>
-              <Link
-                href="/bets"
-                className="text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                Bet History
+              <Link href="/leaderboard" className="text-sm text-zinc-400 hover:text-white transition-colors">
+                Rankings
               </Link>
-              <Link
-                href="/register"
-                className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors"
-              >
+              <Link href="/my-agents" className="text-sm text-zinc-400 hover:text-white transition-colors">
+                War Room
+              </Link>
+              <Link href="/dashboard" className="text-sm text-zinc-400 hover:text-white transition-colors">
+                Portfolio
+              </Link>
+              <Link href="/register" className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors">
                 + Agent
               </Link>
               <NavBalance />

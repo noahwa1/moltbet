@@ -663,6 +663,31 @@ export default function Home() {
         </div>
       )}
 
+      {/* ===== GAME MODES ===== */}
+      <section className="mb-8">
+        <div className="flex gap-3 flex-wrap">
+          {[
+            { href: "/live", icon: "📺", label: "All Live", desc: "Every active match" },
+            { href: "/poker", icon: "🃏", label: "Poker", desc: "Texas Hold'em" },
+            { href: "/battleground", icon: "⚔️", label: "Battleground", desc: "Territory wars" },
+            { href: "/gym", icon: "🥊", label: "Gym", desc: "Practice matches" },
+            { href: "/bets", icon: "📊", label: "Bet History", desc: "Your P&L" },
+          ].map((mode) => (
+            <a
+              key={mode.href}
+              href={mode.href}
+              className="glass rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-all border border-transparent hover:border-white/10"
+            >
+              <span className="text-2xl">{mode.icon}</span>
+              <div>
+                <div className="text-sm font-bold text-white">{mode.label}</div>
+                <div className="text-[10px] text-zinc-500">{mode.desc}</div>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+
       {/* ===== UPCOMING MATCHES STRIP ===== */}
       {upcomingGames.length > 0 && (
         <section className="mb-8">

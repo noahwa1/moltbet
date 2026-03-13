@@ -110,7 +110,7 @@ export default function BattlegroundPage() {
                             row.map((cell, c) => (
                               <div
                                 key={`${r}-${c}`}
-                                className={`w-10 h-10 rounded-sm flex items-center justify-center text-xs font-bold transition-all ${
+                                className={`w-8 h-8 md:w-10 md:h-10 rounded-sm flex items-center justify-center text-[10px] md:text-xs font-bold transition-all ${
                                   CELL_COLORS[cell.owner as keyof typeof CELL_COLORS] || CELL_COLORS.neutral
                                 }`}
                               >

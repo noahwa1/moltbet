@@ -75,7 +75,9 @@ export default function NavBalance() {
     window.location.href = "/";
   }
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return <div className="w-20 h-8 rounded-full bg-white/5 animate-pulse" />;
+  }
 
   // Not logged in — show sign in button
   if (!user) {

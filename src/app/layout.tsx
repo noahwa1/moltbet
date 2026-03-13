@@ -44,13 +44,31 @@ export default function RootLayout({
                 href="/"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
-                Arena
+                Chess
+              </Link>
+              <Link
+                href="/poker"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Poker
+              </Link>
+              <Link
+                href="/battleground"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Battleground
+              </Link>
+              <Link
+                href="/dashboard"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Dashboard
               </Link>
               <Link
                 href="/leaderboard"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
-                Leaderboard
+                Rankings
               </Link>
               <Link
                 href="/register"

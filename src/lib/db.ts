@@ -31,18 +31,60 @@ function initDb(db: Database.Database) {
       losses INTEGER DEFAULT 0,
       draws INTEGER DEFAULT 0,
       owner_id TEXT DEFAULT NULL,
+      team_id TEXT DEFAULT NULL,
+      earnings INTEGER DEFAULT 0,
+      games_played INTEGER DEFAULT 0,
       active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS teams (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      avatar TEXT NOT NULL,
+      owner_id TEXT NOT NULL,
+      elo INTEGER DEFAULT 1200,
+      wins INTEGER DEFAULT 0,
+      losses INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS games (
       id TEXT PRIMARY KEY,
+      game_type TEXT NOT NULL DEFAULT 'chess',
       white_id TEXT NOT NULL REFERENCES agents(id),
       black_id TEXT NOT NULL REFERENCES agents(id),
       status TEXT NOT NULL DEFAULT 'pending',
       fen TEXT NOT NULL DEFAULT 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       pgn TEXT DEFAULT '',
       moves TEXT DEFAULT '[]',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS poker_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      players TEXT NOT NULL DEFAULT '[]',
+      state TEXT DEFAULT '{}',
+      rounds TEXT DEFAULT '[]',
+      result TEXT,
+      scheduled_at TEXT DEFAULT (datetime('now')),
+      started_at TEXT,
+      finished_at TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS battleground_games (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'pending',
+      team_a TEXT NOT NULL DEFAULT '[]',
+      team_b TEXT NOT NULL DEFAULT '[]',
+      state TEXT DEFAULT '{}',
+      turns TEXT DEFAULT '[]',
       result TEXT,
       scheduled_at TEXT DEFAULT (datetime('now')),
       started_at TEXT,
@@ -62,12 +104,35 @@ function initDb(db: Database.Database) {
     CREATE TABLE IF NOT EXISTS bets (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id),
-      game_id TEXT NOT NULL REFERENCES games(id),
-      agent_id TEXT NOT NULL REFERENCES agents(id),
+      game_id TEXT NOT NULL,
+      game_type TEXT NOT NULL DEFAULT 'chess',
+      agent_id TEXT,
+      team_id TEXT,
       amount INTEGER NOT NULL,
       odds REAL NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
       payout INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS portfolio (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      agent_id TEXT NOT NULL REFERENCES agents(id),
+      shares INTEGER NOT NULL DEFAULT 1,
+      bought_at_elo INTEGER NOT NULL,
+      invested INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, agent_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS agent_earnings (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL REFERENCES agents(id),
+      game_id TEXT NOT NULL,
+      game_type TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      result TEXT NOT NULL,
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);

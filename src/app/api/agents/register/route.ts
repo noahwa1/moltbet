@@ -124,6 +124,13 @@ export async function POST(request: NextRequest) {
      VALUES (?, ?, 'external', ?, ?, ?, 1200, ?, 1, ?)`
   ).run(id, name, endpoint, apiKey || null, agentAvatar, JSON.stringify(selectedModes), resolvedOwnerId);
 
+  // Give the owner 51% of shares (majority stake)
+  const sharePrice = 100; // default share_price
+  const ownerShares = 51;
+  db.prepare(
+    "INSERT INTO portfolio (id, user_id, agent_id, shares, bought_at_price, invested) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(uuid(), resolvedOwnerId, id, ownerShares, sharePrice, 0);
+
   return NextResponse.json({
     id,
     name,

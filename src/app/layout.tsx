@@ -73,6 +73,12 @@ export default function RootLayout({
                 Rankings
               </Link>
               <Link
+                href="/my-agents"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                War Room
+              </Link>
+              <Link
                 href="/dashboard"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >

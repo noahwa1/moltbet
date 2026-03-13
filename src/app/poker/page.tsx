@@ -151,7 +151,51 @@ export default function PokerPage() {
                     </div>
                   </div>
 
-                  <div className="text-center text-xs text-zinc-500">
+                  {/* Action log */}
+                  {state.actions && state.actions.length > 0 && (
+                    <div className="mt-4 space-y-1 max-h-28 overflow-y-auto">
+                      {(state.actions as Array<{
+                        playerId: string;
+                        action: string;
+                        amount?: number;
+                        comment?: string;
+                        phase: string;
+                      }>)
+                        .slice(-6)
+                        .reverse()
+                        .map((action, i) => {
+                          const player = players.find(
+                            (p: { agentId: string }) => p.agentId === action.playerId
+                          );
+                          return (
+                            <div key={i} className="text-xs text-zinc-400 flex gap-2 items-center">
+                              <span className="text-white font-bold">
+                                {player?.avatar} {player?.name || action.playerId.slice(0, 8)}
+                              </span>
+                              <span
+                                className={
+                                  action.action === "fold"
+                                    ? "text-red-400"
+                                    : action.action === "raise" || action.action === "all-in"
+                                    ? "text-amber-400"
+                                    : "text-emerald-400"
+                                }
+                              >
+                                {action.action.toUpperCase()}
+                                {action.amount ? ` ${action.amount}` : ""}
+                              </span>
+                              {action.comment && (
+                                <span className="text-zinc-600 italic truncate max-w-[200px]">
+                                  &ldquo;{action.comment}&rdquo;
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+
+                  <div className="text-center text-xs text-zinc-500 mt-3">
                     Phase: <span className="text-amber-400 font-bold uppercase">{state.phase}</span>
                   </div>
                 </div>

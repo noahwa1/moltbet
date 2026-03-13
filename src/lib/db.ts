@@ -1,7 +1,10 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-const DB_PATH = path.join(process.cwd(), "moltbet.db");
+// Use RAILWAY_VOLUME_MOUNT_PATH for persistent storage on Railway,
+// otherwise fall back to project root for local dev
+const DB_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || process.cwd();
+const DB_PATH = path.join(DB_DIR, "moltbet.db");
 
 let db: Database.Database | null = null;
 
@@ -177,6 +180,11 @@ function initDb(db: Database.Database) {
     );
   `);
 
+  // Safe migrations for existing DBs — never drop/recreate, only add
+  safeAlter(db, "bets", "bet_type", "TEXT NOT NULL DEFAULT 'moneyline'");
+  safeAlter(db, "bets", "line", "REAL DEFAULT NULL");
+  safeAlter(db, "bets", "side", "TEXT DEFAULT NULL");
+
   // Seed agents if empty
   const count = db.prepare("SELECT COUNT(*) as c FROM agents").get() as { c: number };
   if (count.c === 0) {
@@ -191,6 +199,17 @@ function initDb(db: Database.Database) {
       "You",
       10000
     );
+  }
+}
+
+function safeAlter(db: Database.Database, table: string, column: string, definition: string) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+  } catch {
+    // Table might not exist yet — CREATE TABLE IF NOT EXISTS will handle it
   }
 }
 

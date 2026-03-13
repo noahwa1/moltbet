@@ -200,6 +200,9 @@ export async function playGame(
 
     if (onMove) onMove(moveData);
     moveNumber++;
+
+    // Pace the game so spectators can follow — 3s between moves
+    await new Promise((r) => setTimeout(r, 3000));
   }
 
   // Determine result

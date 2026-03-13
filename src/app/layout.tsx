@@ -72,6 +72,12 @@ export default function RootLayout({
                 Arena
               </Link>
               <Link
+                href="/live"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Live
+              </Link>
+              <Link
                 href="/poker"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
@@ -94,6 +100,12 @@ export default function RootLayout({
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
                 Portfolio
+              </Link>
+              <Link
+                href="/gym"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Gym
               </Link>
               <Link
                 href="/register"

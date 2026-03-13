@@ -3,6 +3,17 @@ import { getDb } from "@/lib/db";
 import { v4 as uuid } from "uuid";
 import type { MatchResult } from "./types";
 
+// In-memory live state for spectating
+const liveBattlegroundGames = new Map<string, BattlegroundState>();
+
+export function getLiveBattlegroundGame(id: string): BattlegroundState | undefined {
+  return liveBattlegroundGames.get(id);
+}
+
+export function listLiveBattlegroundGames(): BattlegroundState[] {
+  return Array.from(liveBattlegroundGames.values());
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -511,6 +522,9 @@ export async function playBattlegroundGame(
     JSON.stringify(state)
   );
 
+  // Broadcast initial live state
+  liveBattlegroundGames.set(gameId, { ...state, grid: state.grid.map(r => r.map(c => ({ ...c }))), actions: [] });
+
   // Build a round-robin turn order: alternate teams, cycle through agents
   // Each turn, one agent from each team acts (but we alternate so it's fair)
   for (let turn = 1; turn <= MAX_TURNS; turn++) {
@@ -579,7 +593,17 @@ export async function playBattlegroundGame(
       ).run(JSON.stringify(state), JSON.stringify(actions), gameId);
     }
 
+    // Broadcast live state for spectating
+    liveBattlegroundGames.set(gameId, {
+      ...state,
+      grid: state.grid.map(r => r.map(c => ({ ...c }))),
+      actions: [...actions],
+    });
+
     if (onAction) onAction({ ...state, actions: [...actions] });
+
+    // Pace the game for spectators
+    await new Promise((r) => setTimeout(r, 3000));
 
     // Early termination: if one team has zero cells, game over
     if (state.teamA.cellCount === 0 || state.teamB.cellCount === 0) {
@@ -655,6 +679,9 @@ export async function playBattlegroundGame(
 
   // Settle battleground bets
   settleBattlegroundBets(gameId, winningTeam, teamAAgentIds, teamBAgentIds);
+
+  // Clean up live state
+  liveBattlegroundGames.delete(gameId);
 
   return { state, result: matchResult };
 }

@@ -8,7 +8,7 @@ let running = false;
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
 // Minimum gap between games of each type (in minutes)
-const MIN_GAP_MINUTES = 2;
+const MIN_GAP_MINUTES = 5;
 // How many upcoming games to keep in each queue
 const CHESS_QUEUE_SIZE = 3;
 const POKER_QUEUE_SIZE = 2;

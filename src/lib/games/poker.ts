@@ -2,6 +2,17 @@ import { getDb } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
 import { v4 as uuid } from "uuid";
 
+// In-memory live state for spectating
+const livePokerGames = new Map<string, PokerGameState>();
+
+export function getLivePokerGame(id: string): PokerGameState | undefined {
+  return livePokerGames.get(id);
+}
+
+export function listLivePokerGames(): PokerGameState[] {
+  return Array.from(livePokerGames.values());
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -634,52 +645,77 @@ export async function playPokerGame(playerAgentIds: string[]): Promise<PokerGame
 
   console.log(`[Poker] Game ${gameId} started with ${numPlayers} players. Dealer: ${state.players[state.dealerIndex].name}`);
 
+  // Broadcast initial state
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
+
   // Pre-flop: action starts left of big blind
   const preflopStart = (bbIndex + 1) % numPlayers;
   await runBettingRound(state, agents, preflopStart);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
 
   if (countActivePlayers(state) <= 1) {
-    return finishGame(state, agents, db);
+    const result = finishGame(state, agents, db);
+    livePokerGames.delete(gameId);
+    return result;
   }
+
+  // Pause between phases for spectators
+  await new Promise((r) => setTimeout(r, 3000));
 
   // Flop
   state.phase = "flop";
   deal(1); // burn
   state.communityCards.push(...deal(3));
   resetBetsForNewRound(state);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
   console.log(`[Poker] Flop: ${cardsToString(state.communityCards)}`);
 
   const postFlopStart = findFirstActiveAfterDealer(state);
   await runBettingRound(state, agents, postFlopStart);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
 
   if (countActivePlayers(state) <= 1) {
-    return finishGame(state, agents, db);
+    const result = finishGame(state, agents, db);
+    livePokerGames.delete(gameId);
+    return result;
   }
+
+  await new Promise((r) => setTimeout(r, 3000));
 
   // Turn
   state.phase = "turn";
   deal(1); // burn
   state.communityCards.push(...deal(1));
   resetBetsForNewRound(state);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
   console.log(`[Poker] Turn: ${cardsToString(state.communityCards)}`);
 
   await runBettingRound(state, agents, postFlopStart);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
 
   if (countActivePlayers(state) <= 1) {
-    return finishGame(state, agents, db);
+    const result = finishGame(state, agents, db);
+    livePokerGames.delete(gameId);
+    return result;
   }
+
+  await new Promise((r) => setTimeout(r, 3000));
 
   // River
   state.phase = "river";
   deal(1); // burn
   state.communityCards.push(...deal(1));
   resetBetsForNewRound(state);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
   console.log(`[Poker] River: ${cardsToString(state.communityCards)}`);
 
   await runBettingRound(state, agents, postFlopStart);
+  livePokerGames.set(gameId, { ...state, players: state.players.map(p => ({ ...p })) });
 
   // Showdown
-  return finishGame(state, agents, db);
+  const result = finishGame(state, agents, db);
+  livePokerGames.delete(gameId);
+  return result;
 }
 
 function postBlind(state: PokerGameState, playerIndex: number, amount: number): void {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
+import { authFetch } from "@/components/AuthPrompt";
 import {
   getPrestigeTier,
   getPlaystyleTags,
@@ -113,7 +114,7 @@ export default function AgentProfilePage({
   async function invest() {
     setInvesting(true);
     try {
-      const res = await fetch("/api/dashboard/invest", {
+      const res = await authFetch("/api/dashboard/invest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: id, shares: investShares }),

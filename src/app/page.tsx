@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { authFetch } from "@/components/AuthPrompt";
 import ChessBoard from "@/components/ChessBoard";
 import OddsSparkline from "@/components/OddsSparkline";
 import { VOLATILITY_RATINGS } from "@/lib/prestige";
@@ -67,6 +68,7 @@ interface UserData {
     status: string;
     payout: number;
   }>;
+  loggedIn?: boolean;
 }
 
 export default function Home() {
@@ -98,8 +100,9 @@ export default function Home() {
     setGames(gamesData);
     setUserData(userDataRes);
 
-    // Show welcome for new users (no bets placed yet, full balance)
+    // Show welcome for new logged-in users (no bets placed yet, full balance)
     if (
+      userDataRes.loggedIn &&
       userDataRes.user.balance === 10000 &&
       userDataRes.bets.length === 0 &&
       userDataRes.user.total_won === 0
@@ -158,7 +161,7 @@ export default function Home() {
     if (!quickBet) return;
     setPlacing(true);
     try {
-      const res = await fetch("/api/bets", {
+      const res = await authFetch("/api/bets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -186,7 +189,7 @@ export default function Home() {
   async function handleCashOut(betId: string) {
     setCashingOut(betId);
     try {
-      const res = await fetch("/api/bets/cashout", {
+      const res = await authFetch("/api/bets/cashout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ betId }),
@@ -834,7 +837,7 @@ export default function Home() {
       )}
 
       {/* ===== YOUR ACTIVE BETS ===== */}
-      {userData &&
+      {userData?.loggedIn &&
         userData.bets.filter((b) => b.status === "pending").length > 0 && (
           <section className="mb-8">
             <h2 className="text-sm font-bold text-amber-400/60 uppercase tracking-wider mb-3">

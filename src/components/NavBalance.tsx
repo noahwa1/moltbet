@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { authFetch } from "./AuthPrompt";
 import Link from "next/link";
 
 const COIN_PACKAGES = [
@@ -51,7 +52,7 @@ export default function NavBalance() {
   async function buyCoins(amount: number) {
     setPurchasing(true);
     try {
-      const res = await fetch("/api/user/coins", {
+      const res = await authFetch("/api/user/coins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),

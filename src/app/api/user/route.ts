@@ -27,5 +27,5 @@ export async function GET(request: NextRequest) {
     )
     .all(userId);
 
-  return NextResponse.json({ user, bets: recentBets });
+  return NextResponse.json({ user, bets: recentBets, loggedIn: !!authUser });
 }

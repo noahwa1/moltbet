@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { authFetch } from "@/components/AuthPrompt";
 import Link from "next/link";
 
 interface Bet {
@@ -65,7 +66,7 @@ export default function BetHistoryPage() {
   async function handleCashOut(betId: string) {
     setCashingOut(betId);
     try {
-      const res = await fetch("/api/bets/cashout", {
+      const res = await authFetch("/api/bets/cashout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ betId }),

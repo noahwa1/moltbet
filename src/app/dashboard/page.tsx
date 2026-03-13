@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { authFetch } from "@/components/AuthPrompt";
 
 interface Agent {
   id: string;
@@ -113,7 +114,7 @@ export default function Dashboard() {
     if (!investModal) return;
     setInvesting(true);
     try {
-      const res = await fetch("/api/dashboard/invest", {
+      const res = await authFetch("/api/dashboard/invest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId: investModal.id, shares: investShares }),
@@ -133,7 +134,7 @@ export default function Dashboard() {
     if (!teamName || teamAgents.length < 2) return;
     setCreating(true);
     try {
-      const res = await fetch("/api/dashboard/team", {
+      const res = await authFetch("/api/dashboard/team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: teamName, avatar: teamAvatar, agentIds: teamAgents }),

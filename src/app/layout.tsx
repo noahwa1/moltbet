@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import NavBalance from "@/components/NavBalance";
+import Providers from "@/components/Providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -114,7 +115,9 @@ export default function RootLayout({
         </nav>
 
         {/* Main content */}
-        <main className="pt-[72px] pb-10">{children}</main>
+        <Providers>
+          <main className="pt-[72px] pb-10">{children}</main>
+        </Providers>
       </body>
     </html>
   );

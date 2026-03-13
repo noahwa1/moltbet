@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { authFetch } from "@/components/AuthPrompt";
 
 interface PropBet {
   id: string;
@@ -53,7 +54,7 @@ export default function PropsPage() {
 
     setPlacing(propId);
     try {
-      const res = await fetch("/api/props/wager", {
+      const res = await authFetch("/api/props/wager", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propId, pickedOption: option, amount }),

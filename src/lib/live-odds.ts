@@ -28,6 +28,53 @@ export function getOddsHistory(gameId: string): OddsSnapshot[] {
 }
 
 /**
+ * Rebuild odds history from stored move FENs when in-memory history is lost (e.g. after redeploy).
+ * Call this when getOddsHistory returns empty but the game has moves.
+ */
+export function rebuildOddsHistory(
+  gameId: string,
+  whiteId: string,
+  blackId: string,
+  moves: Array<{ fen: string; san: string }>
+): OddsSnapshot[] {
+  if (oddsHistory.has(gameId) && oddsHistory.get(gameId)!.length > 0) {
+    return oddsHistory.get(gameId)!;
+  }
+
+  const snapshots: OddsSnapshot[] = [];
+  const moveHistory: string[] = [];
+
+  for (const move of moves) {
+    moveHistory.push(move.san);
+    const evaluation = evaluatePosition(move.fen);
+
+    // Simplified odds calc without DB hits for speed
+    const evalShift = sigmoid(evaluation * 0.3) - 0.5;
+    const phaseMultiplier = moveHistory.length < 10 ? 0.3 : moveHistory.length < 30 ? 0.6 : 0.9;
+    let whiteWinProb = 0.5 + evalShift * phaseMultiplier;
+    whiteWinProb = Math.max(0.05, Math.min(0.95, whiteWinProb));
+
+    const drawProb = 0.1;
+    const adjustedWhite = whiteWinProb * (1 - drawProb);
+    const adjustedBlack = (1 - whiteWinProb) * (1 - drawProb);
+
+    snapshots.push({
+      moveNumber: moveHistory.length,
+      white: Math.max(1.02, parseFloat((1 / adjustedWhite).toFixed(2))),
+      black: Math.max(1.02, parseFloat((1 / adjustedBlack).toFixed(2))),
+      evaluation,
+      timestamp: Date.now(),
+    });
+  }
+
+  if (snapshots.length > 0) {
+    oddsHistory.set(gameId, snapshots);
+  }
+
+  return snapshots;
+}
+
+/**
  * Calculate live odds based on:
  * 1. Base ELO difference
  * 2. Current board evaluation (material, position)

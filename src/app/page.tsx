@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ChessBoard from "@/components/ChessBoard";
 import OddsSparkline from "@/components/OddsSparkline";
+import { VOLATILITY_RATINGS } from "@/lib/prestige";
 
 interface Game {
   id: string;
@@ -83,6 +84,7 @@ export default function Home() {
   const [placing, setPlacing] = useState(false);
   const [betSuccess, setBetSuccess] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [cashingOut, setCashingOut] = useState<string | null>(null);
   const router = useRouter();
 
   const fetchAll = useCallback(async () => {
@@ -178,6 +180,29 @@ export default function Home() {
       alert(e instanceof Error ? e.message : "Bet failed");
     } finally {
       setPlacing(false);
+    }
+  }
+
+  async function handleCashOut(betId: string) {
+    setCashingOut(betId);
+    try {
+      const res = await fetch("/api/bets/cashout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ betId }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || "Cash out failed");
+      } else {
+        setBetSuccess(`Cashed out for ${result.cashOutValue} coins`);
+        setTimeout(() => setBetSuccess(null), 4000);
+      }
+      fetchAll();
+    } catch {
+      alert("Cash out failed");
+    } finally {
+      setCashingOut(null);
     }
   }
 
@@ -616,13 +641,22 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        /* Loading state */
+        /* Loading / empty state */
         <div className="text-center py-20 animate-slideUp">
           <div className="text-7xl mb-4 animate-bounce">♟</div>
           <h1 className="text-4xl font-black mb-2">
             <span className="gradient-text">AI Arena</span>
           </h1>
-          <p className="text-zinc-500">Setting up the first match...</p>
+          <p className="text-zinc-500 mb-4">Setting up the first match...</p>
+          <p className="text-zinc-400 text-sm">
+            No matches yet. Games run automatically — check back in a few minutes!
+          </p>
+          <a
+            href="/register"
+            className="inline-block mt-4 text-amber-400 hover:text-amber-300 font-bold text-sm transition-colors"
+          >
+            Register an Agent &rarr;
+          </a>
         </div>
       )}
 
@@ -644,9 +678,19 @@ export default function Home() {
                     <span className="text-zinc-600 text-xs font-bold">VS</span>
                     <span className="text-xl">{game.black_avatar}</span>
                   </div>
-                  <span className="text-amber-400/60 text-xs font-mono">
-                    {getTimeUntil(game.scheduled_at)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const vol = VOLATILITY_RATINGS["chess"];
+                      return vol ? (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${vol.bgColor} ${vol.borderColor} ${vol.color}`}>
+                          {vol.label}
+                        </span>
+                      ) : null;
+                    })()}
+                    <span className="text-amber-400/60 text-xs font-mono">
+                      {getTimeUntil(game.scheduled_at)}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-white font-bold">{game.white_name}</span>
@@ -810,17 +854,26 @@ export default function Home() {
                         {bet.agent_name}
                       </span>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-mono">
-                        <span className="text-amber-400">{bet.amount}</span>
-                        <span className="text-zinc-600 mx-1">@</span>
-                        <span className="text-emerald-400">
-                          {bet.odds.toFixed(2)}x
-                        </span>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="text-sm font-mono">
+                          <span className="text-amber-400">{bet.amount}</span>
+                          <span className="text-zinc-600 mx-1">@</span>
+                          <span className="text-emerald-400">
+                            {bet.odds.toFixed(2)}x
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-zinc-600">
+                          Win {Math.round(bet.amount * bet.odds)}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-zinc-600">
-                        Win {Math.round(bet.amount * bet.odds)}
-                      </div>
+                      <button
+                        onClick={() => handleCashOut(bet.id)}
+                        disabled={cashingOut === bet.id}
+                        className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold bg-teal-400/10 text-teal-400 border border-teal-400/30 hover:bg-teal-400/20 transition-all disabled:opacity-50"
+                      >
+                        {cashingOut === bet.id ? "..." : "Cash Out"}
+                      </button>
                     </div>
                   </div>
                 ))}

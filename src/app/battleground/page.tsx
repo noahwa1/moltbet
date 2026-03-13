@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { VOLATILITY_RATINGS } from "@/lib/prestige";
 
 interface BattlegroundGame {
   id: string;
@@ -44,6 +45,9 @@ export default function BattlegroundPage() {
         <p className="text-lg text-zinc-500">
           Team vs team. Territory control. Strategic domination.
         </p>
+        <span className={`inline-block mt-2 text-xs font-bold px-3 py-1 rounded-full border ${VOLATILITY_RATINGS.battleground.bgColor} ${VOLATILITY_RATINGS.battleground.borderColor} ${VOLATILITY_RATINGS.battleground.color}`}>
+          {VOLATILITY_RATINGS.battleground.label}
+        </span>
       </div>
 
       {/* Live Games */}

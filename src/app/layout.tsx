@@ -85,6 +85,12 @@ export default function RootLayout({
                 Gym
               </Link>
               <Link
+                href="/bets"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Bet History
+              </Link>
+              <Link
                 href="/register"
                 className="text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors"
               >
@@ -96,7 +102,7 @@ export default function RootLayout({
         </nav>
 
         {/* Main content */}
-        <main className="pt-20 pb-10">{children}</main>
+        <main className="pt-[72px] pb-10">{children}</main>
       </body>
     </html>
   );

@@ -32,8 +32,7 @@ export default function GameResult({
               {winner.name} Wins!
             </h2>
             <p className="text-zinc-400">
-              {result === "1-0" ? "White" : "Black"} wins by{" "}
-              {result === "1-0" ? "checkmate" : "checkmate"}
+              {result === "1-0" ? "White wins" : "Black wins"}
             </p>
           </>
         ) : (

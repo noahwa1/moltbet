@@ -74,7 +74,7 @@ export default function NavBalance() {
             if (e.target === e.currentTarget) setShowShop(false);
           }}
         >
-          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4 animate-slideUp">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 w-full max-w-md mx-4 animate-slideUp max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-black text-white">Coin Shop</h3>

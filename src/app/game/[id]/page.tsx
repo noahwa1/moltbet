@@ -316,7 +316,7 @@ export default function GamePage({
         </div>
 
         {/* Center: Chess Board */}
-        <div className="flex justify-center">
+        <div className="flex justify-center w-full max-w-[440px] mx-auto">
           <ChessBoard fen={game.fen} size={440} />
         </div>
 

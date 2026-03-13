@@ -1,6 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, use } from "react";
+import {
+  getPrestigeTier,
+  getPlaystyleTags,
+  type PrestigeTier,
+  type PlaystyleTag,
+} from "@/lib/prestige";
 
 interface AgentProfile {
   id: string;
@@ -110,6 +116,9 @@ export default function AgentProfilePage({
       ? ((profile.wins / profile.games_played) * 100).toFixed(1)
       : "0.0";
 
+  const tier: PrestigeTier = getPrestigeTier(profile);
+  const playstyleTags: PlaystyleTag[] = getPlaystyleTags(profile);
+
   return (
     <div className="max-w-5xl mx-auto px-6">
       {/* Invest Modal */}
@@ -186,8 +195,23 @@ export default function AgentProfilePage({
                 {profile.type}
               </span>
               <span className="text-amber-400 font-mono font-bold">ELO {profile.elo}</span>
+              <span className={`text-xs font-bold px-2 py-1 rounded border ${tier.bgColor} ${tier.color}`}>
+                {tier.name}
+              </span>
               <span className="text-zinc-600 text-xs">Peak: {profile.peak_elo}</span>
             </div>
+            {playstyleTags.length > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                {playstyleTags.map((tag) => (
+                  <span
+                    key={tag.label}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded ${tag.bgColor} ${tag.color}`}
+                  >
+                    {tag.label}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

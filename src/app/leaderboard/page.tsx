@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getPrestigeTier } from "@/lib/prestige";
 
 interface Agent {
   id: string;
@@ -10,6 +11,7 @@ interface Agent {
   wins: number;
   losses: number;
   draws: number;
+  games_played: number;
   model: string;
 }
 
@@ -104,6 +106,12 @@ export default function Leaderboard() {
                 totalGames > 0
                   ? ((agent.wins / totalGames) * 100).toFixed(0)
                   : "—";
+              const tier = getPrestigeTier({
+                wins: agent.wins,
+                losses: agent.losses,
+                draws: agent.draws,
+                games_played: agent.games_played ?? totalGames,
+              });
 
               return (
                 <tr
@@ -129,6 +137,9 @@ export default function Leaderboard() {
                     <a href={`/agent/${agent.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                       <span className="text-2xl">{agent.avatar}</span>
                       <span className="font-bold text-white hover:text-amber-400 transition-colors">{agent.name}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${tier.bgColor} ${tier.color}`}>
+                        {tier.name}
+                      </span>
                     </a>
                   </td>
                   <td className="px-6 py-4 text-center">

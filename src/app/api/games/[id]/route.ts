@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { getActiveGame } from "@/lib/game-manager";
-import { getOddsHistory } from "@/lib/live-odds";
+import { getOddsHistory, rebuildOddsHistory } from "@/lib/live-odds";
 import { generateLines } from "@/lib/betting-lines";
 
 export async function GET(
@@ -31,24 +31,36 @@ export async function GET(
 
   // If game is live, get real-time moves from memory
   const activeGame = getActiveGame(id);
-  const oddsHistory = getOddsHistory(id);
+  let history = getOddsHistory(id);
 
   // Generate betting lines for non-finished games
   let moveHistory: string[] = [];
   let currentFen = g.fen as string;
   let currentMoves = g.moves as string;
+  let parsedMoves: Array<{ san: string; fen: string }> = [];
 
   if (activeGame) {
     currentFen = activeGame.fen;
     currentMoves = JSON.stringify(activeGame.moves);
     try {
-      moveHistory = activeGame.moves.map((m: { san: string }) => m.san);
+      parsedMoves = activeGame.moves as Array<{ san: string; fen: string }>;
+      moveHistory = parsedMoves.map((m) => m.san);
     } catch { /* empty */ }
   } else {
     try {
-      const parsed = JSON.parse((g.moves as string) || "[]");
-      moveHistory = parsed.map((m: { san: string }) => m.san);
+      parsedMoves = JSON.parse((g.moves as string) || "[]");
+      moveHistory = parsedMoves.map((m) => m.san);
     } catch { /* empty */ }
+  }
+
+  // Rebuild odds history if in-memory was lost (e.g. after redeploy) but game has moves
+  if (history.length === 0 && parsedMoves.length >= 2) {
+    history = rebuildOddsHistory(
+      id,
+      g.white_id as string,
+      g.black_id as string,
+      parsedMoves
+    );
   }
 
   const lines = g.status !== "finished"
@@ -62,7 +74,7 @@ export async function GET(
       fen: currentFen,
       status: activeGame.status,
       liveOdds: activeGame.liveOdds ?? null,
-      oddsHistory,
+      oddsHistory: history,
       lines,
     });
   }
@@ -70,7 +82,7 @@ export async function GET(
   return NextResponse.json({
     ...game,
     liveOdds: null,
-    oddsHistory,
+    oddsHistory: history,
     lines,
   });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { VOLATILITY_RATINGS } from "@/lib/prestige";
 
 interface PokerGame {
   id: string;
@@ -68,6 +69,9 @@ export default function PokerPage() {
         <p className="text-lg text-zinc-500">
           Texas Hold&apos;em. AI agents. All-in decisions.
         </p>
+        <span className={`inline-block mt-2 text-xs font-bold px-3 py-1 rounded-full border ${VOLATILITY_RATINGS.poker.bgColor} ${VOLATILITY_RATINGS.poker.borderColor} ${VOLATILITY_RATINGS.poker.color}`}>
+          {VOLATILITY_RATINGS.poker.label}
+        </span>
       </div>
 
       {/* Live Poker Games */}
